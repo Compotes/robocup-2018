@@ -5,8 +5,8 @@
 #include <iostream>
 #include <string>
 
-#define SENSOR_1_READ_GPIO 298
-#define SENSOR_2_READ_GPIO 388
+#define DRIBBLER_READ_GPIO 298
+#define DRIBBLER_WRITE_GPIO 388
 
 #define COMPASS_RESET_WRITE_GPIO 480
 #define COMPASS_RESET_READ_GPIO 486

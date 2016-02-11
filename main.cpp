@@ -101,16 +101,14 @@ int main(int argc, char* argv[]) {
 	init_serial();
 	init_server();
 	init_gpio();
-
-/*
 	this_thread::sleep_for(chrono::milliseconds(1000));
 	if (i_am_server) {
 		init_bluetooth_server();
 	} else {
 		init_bluetooth_client();
 	}
-*/
-	ext_goalkeeper = 1;
+
+	//ext_goalkeeper = 0;
 	robot_speed.store(DEFAULT_SPEED);
 	bool only_align;
 
@@ -178,7 +176,7 @@ int main(int argc, char* argv[]) {
 			} else if (ball_zone <= SECOND_ZONE_NUMBER) {
 				local_degree += 1.5*(local_degree-90)/ball_zone;
 			} else if (ball_zone <= FIFTH_ZONE_NUMBER) {
-				local_degree += 3*(local_degree-90)/ball_zone;
+				local_degree += 4*(local_degree-90)/ball_zone;
 			}
 
         } else {
@@ -296,7 +294,7 @@ int main(int argc, char* argv[]) {
 			if (goal_height.load() > 110) {
 				azimuth *= 1.6;
 			} else {
-				azimuth *= 1.5;
+				azimuth *= 1.3;
 			}
 			if(ext_goalkeeper){
 				azimuth *= 1.5;
