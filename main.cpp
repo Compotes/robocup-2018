@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
 		init_bluetooth_client();
 	}
 
-	//ext_goalkeeper = 0;
+	ext_goalkeeper = 0;
 	robot_speed.store(DEFAULT_SPEED);
 	bool only_align;
 
@@ -172,9 +172,9 @@ int main(int argc, char* argv[]) {
 			if (local_degree < (90 + ATTACK_ANGLE_TOLERANCE) && local_degree > (90 - ATTACK_ANGLE_TOLERANCE)) {
 				local_speed = robot_speed.load();
 			} else if (ball_zone <= FIRST_ZONE_NUMBER) {
-				local_degree += 3*(local_degree-90)/ball_zone;
+				local_degree += 3.2*(local_degree-90)/ball_zone;
 			} else if (ball_zone <= SECOND_ZONE_NUMBER) {
-				local_degree += 1.5*(local_degree-90)/ball_zone;
+				local_degree += 1.7*(local_degree-90)/ball_zone;
 			} else if (ball_zone <= FIFTH_ZONE_NUMBER) {
 				local_degree += 4*(local_degree-90)/ball_zone;
 			}
@@ -221,7 +221,7 @@ int main(int argc, char* argv[]) {
 					}
 					ext_line_detected.store(false);
 				}
-			} else if (ext_right_ultrasonic.load() == 0) {
+			} /*else if (ext_right_ultrasonic.load() == 0) {
 				i_saw_line = false;
 				i_saw_line_again = false;
 				local_speed = goalkeeper_speed(bd);
@@ -233,7 +233,7 @@ int main(int argc, char* argv[]) {
 				local_speed = goalkeeper_speed(bd);
 				last_site_right = false;
 				local_degree = (compass_degree.load()+0) % 360;
-			} else if (ext_right_ultrasonic.load() == 2 && ext_left_ultrasonic.load() == 2) {
+			}*/ else if (ext_right_ultrasonic.load() == 2 && ext_left_ultrasonic.load() == 2) {
 				local_speed = 70;
 				i_saw_line = false;
 				i_saw_line_again = false;
@@ -242,7 +242,7 @@ int main(int argc, char* argv[]) {
 				local_speed = goalkeeper_speed(bd);
 				i_saw_line = false;
 				i_saw_line_again = false;
-				if(!i_see_ball || abs(bd) < 2) {
+				if(!i_see_ball || abs(bd) < 5) {
 					only_align = true;
 				} else if(bd < 0) {
 					local_degree = (compass_degree.load()+180) % 360;
@@ -262,8 +262,8 @@ int main(int argc, char* argv[]) {
 		if (i_have_ball && i_see_goal_to_kick && kicker_available && i_see_ball_infront_me && !kick_started) /* && goal_height.load() > 70*/ {
 			gettimeofday(&kicker_start, 0);
 			gettimeofday(&kick_start, 0);
-
-			kick_started = true;
+			ext_kick.store(true);
+			kick_started = false;
 			kicker_available = false;
 		} /*else if (i_have_ball) {
 			//trick = true;
@@ -294,10 +294,10 @@ int main(int argc, char* argv[]) {
 			if (goal_height.load() > 110) {
 				azimuth *= 1.6;
 			} else {
-				azimuth *= 1.3;
+				azimuth *= 1.5;
 			}
 			if(ext_goalkeeper){
-				azimuth *= 1.5;
+				azimuth *= 2.5;
 			}
 			azimuth = relative_azimuth(abs(azimuth)) * az;
 			azimuth/= 2.5;

@@ -131,8 +131,10 @@ void read_protocol() {
 			//cout << "right: 1" << endl;
 			ext_right_ultrasonic.store(1);
 		} else if (buf[0] == LEFT_CLOSE) {
+			//cout << "left: 2" << endl;
 			ext_left_ultrasonic.store(2);
 		} else if (buf[0] == RIGHT_CLOSE) {
+			//cout << "right: 2" << endl;
 			ext_right_ultrasonic.store(2);
 		}
 	}
@@ -252,15 +254,15 @@ void write_protocol() {
 				sdPut(dribbler_speed);
 			}
 			ext_send_calibration_data.store(false);
-			if(local_goalkeeper) sdPut(START_ULTRASONIC_COMMAND);
+			/*if(local_goalkeeper)*/ sdPut(START_ULTRASONIC_COMMAND);
 		}
-		if(local_goalkeeper && !ext_goalkeeper){
+		/*if(local_goalkeeper && !ext_goalkeeper){
 			local_goalkeeper = false;
 			sdPut(STOP_ULTRASONIC_COMMAND);
 		} else if(!local_goalkeeper && ext_goalkeeper){
 			local_goalkeeper = true;
 			sdPut(START_ULTRASONIC_COMMAND);
-		}
+		}*/
 		serialMeasureFps();
 		this_thread::sleep_for(chrono::milliseconds(10));
 	}
