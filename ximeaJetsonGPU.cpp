@@ -43,29 +43,6 @@ byte *matToBytes(Mat image)
 }
 
 Mat *uMat;
-//cv::SimpleBlobDetector detector;
-
-void unwrapAndSave(Mat *mat, float a, float b, double s) {
-    //printf("Unwrapping %.1f %.1f %.1f\n", a, b, s);
-    OmniOperations *omni = new OmniOperations(
-            mat->size().width / 2.0f,
-            mat->size().height / 2.0f,
-            mat->size().height / 2.0f,
-            57.0f, 
-            a, 
-            b,
-            s
-            );
-
-    // char fname[128];
-    // sprintf(fname, "/tmp/test_omni_%.1f_%.1f_%.1f.png", a, b, s);
-    uMat = omni->unwrap(*mat, false);
-    //result->copyTo(uMat);
-
-    //imwrite(fname, *result);
-
-    delete omni;
-}
 
 void measureFps() {
     clock_gettime(CLOCK_REALTIME, &t1);

@@ -172,7 +172,6 @@ typedef enum
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/xphoto.hpp>
 #include <opencv2/features2d.hpp>
-#include "OmniOperations.hpp"
 
 // debug support
 
