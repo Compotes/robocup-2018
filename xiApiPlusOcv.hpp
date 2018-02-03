@@ -170,10 +170,11 @@ typedef enum
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/cudaimgproc.hpp>
 #include <opencv2/cudaarithm.hpp>
+#include <opencv2/cudafilters.hpp>
 #include <opencv2/xphoto.hpp>
 #include <opencv2/features2d.hpp>
 
-// debug support
+// debug supportNVCC = /usr/local/cuda-8.0/bin/nvcc
 
 #define DBFIN  "xAPIp:"
 #define DBFOUT "res: "

@@ -1,0 +1,29 @@
+#include "inRangeGPU.cuh"
+
+__global__ void inRange_kernel(const cv::cuda::PtrStepSz<uchar3> src, cv::cuda::PtrStepSzb dst,
+                               int lbc0, int ubc0, int lbc1, int ubc1, int lbc2, int ubc2) {
+	int x = blockIdx.x * blockDim.x + threadIdx.x;
+	int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (x >= src.cols || y >= src.rows) return;
+
+	uchar3 v = src(y, x);
+	if (v.x >= lbc0 && v.x <= ubc0 && v.y >= lbc1 && v.y <= ubc1 && v.z >= lbc2 && v.z <= ubc2)
+		dst(y, x) = 255;
+	else
+		dst(y, x) = 0;
+}
+
+__host__ void inRange_gpu(cv::cuda::GpuMat &src, int minH, int minS, int minV,
+				 int maxH, int maxS, int maxV, cv::cuda::GpuMat &dst) {
+	const int m = 32;
+	int numRows = src.rows, numCols = src.cols;
+	if (numRows == 0 || numCols == 0) return;
+	// Attention! Cols Vs. Rows are reversed
+  
+	const dim3 gridSize(ceil((float)numCols / m), ceil((float)numRows / m), 1);
+	const dim3 blockSize(m, m, 1);
+
+	inRange_kernel<<<gridSize, blockSize>>>(src, dst, minH, maxH, minS, maxS,
+                                          minV, maxV);
+}

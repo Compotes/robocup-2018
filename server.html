@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<!-- <meta http-equiv="refresh" content="1"> -->
+	</head>
+	<script>
+		/*window.onload = function() {
+			var image = document.getElementById("svg");
+			function updateImage() {
+				image.src = image.src;
+			}
+			//setTimeout(updateImage,5);
+			setInterval(updateImage, 100);
+		}*/
+		function SubmitFunc() {
+			document.getElementById("Form").submit();
+		}
+	</script>
+<body>
+
+<form id="Form" method="get" style="float: left">
+	<input type="range" name="range_value" min="0" max="255" step="1" value="14">
+	<br>
+	<input type="text" name="firstname" value="Mickey">
+	<br>
+	<input type="text" name="lastname" value="Mouse">
+	<br><br>
+	<input type="submit" value="Submit">
+</form>
+
+<form>
+<button type="submit" name="kick" value="1">kick</button>
+</form>
+
+<form>
+<button onclick="window.open('/obr.jpg', '_blank')">OPEN LIVE STREAM</button>
+</form>
+
+<form>
+<button type="submit" name="load_values" value="1">load calibration values</button>
+</form>
+
+<form>
+<button type="submit" name="reload_server" value="1">reload server html</button>
+</form>
+
+<form>
+<button type="submit" name="live_stream" value="1">turn on/off livestream</button>
+</form>
+
+<form>
+<button type="submit" name="set_compass_nord" value="1">Set compass nord</button>
+</form>
+
+<form>
+<button type="submit" name="calibrate" value="1">Calibrate</button>
+</form>
+
+<form>
+<button type="submit" name="go" value="1">GO</button>
+</form>
+
+</body>
+</html>

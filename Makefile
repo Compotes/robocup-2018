@@ -1,39 +1,65 @@
-CXX=g++
-SOURCES=ximeaJetsonGPU.cpp
-SOURCES+=xiApiPlusOcv.cpp
-SOURCES+=
-OBJECTS=$(SOURCES:.cpp=.o)
-OBJECTS+=
+#program name
 PROGRAM=ximeaJetsonGPU
 
-CUDAPATH = /usr/local/cuda-8.0
+#build file
+OBJDIR = build
 
-#LFLAGS = -L$(CUDAPATH)/lib64 -L/root/opencv-3.3.0/build/lib -lcuda -lcudart -lopencv_cudabgsegm -lopencv_cudaobjdetect -lopencv_cudastereo -lopencv_dnn -lopencv_ml -lopencv_shape -lopencv_stitching -lopencv_cudafeatures2d -lopencv_superres -lopencv_cudacodec -lopencv_videostab -lopencv_cudaoptflow -lopencv_cudalegacy -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_videoio -lopencv_photo -lopencv_imgcodecs -lopencv_cudawarping -lopencv_cudaimgproc -lopencv_cudafilters -lopencv_video -lopencv_objdetect -lopencv_imgproc -lopencv_flann -lopencv_cudaarithm -lopencv_core -lopencv_cudev
-LFLAGS = 
+#c++ compiler
+CC = g++
+CFLAGS = -I . -I /root/opencv-3.3.0/build/include -I /root/opencv_contrib-3.3.0/modules/xphoto/include -I /usr/local/cuda/include -g3 -Wall -c -fmessage-length=0 -std=c++11 -lRTIMULib
+CSOURCES := $(wildcard *.cpp)
+COBJECTS := $(CSOURCES:%.cpp=$(OBJDIR)/%.o)
+
+#CUDA compiler
+NVCC = /usr/local/cuda-8.0/bin/nvcc
+CUDAPATH = /usr/local/cuda-8.0
+NFLAGS = -ccbin g++ -m64 -gencode arch=compute_53,code=sm_53 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_62,code=sm_62 -gencode arch=compute_62,code=compute_62 
+NSOURCES := $(wildcard *.cu)
+NOBJECTS := $(NSOURCES:%.cu=$(OBJDIR)/%.o)
+
+#linker
+LINKER = g++
+LFLAGS = -lm3api -lopencv_core -lopencv_highgui -lRTIMULib -lopencv_imgproc -lopencv_imgcodecs -lopencv_cudaimgproc -lopencv_cudafilters -lcudart -lopencv_features2d -lopencv_cudaarithm -lopencv_cudalegacy -L/root/opencv-3.3.0/build/lib -L$(CUDAPATH)/lib64 -std=c++11 -lpthread
+
+# colors
+Color_Off='\033[0m'
+Black='\033[1;30m'
+Red='\033[1;31m'
+Green='\033[1;32m'
+Yellow='\033[1;33m'
+Blue='\033[1;34m'
+Purple='\033[1;35m'
+Cyan='\033[1;36m'
+White='\033[1;37m'
+
 
 all: $(PROGRAM)
 
-$(PROGRAM): xiApiPlusOcv.o ximeaJetsonGPU.o
-	g++ $(OBJECTS) -o $@ -lm3api -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_imgcodecs -lopencv_cudaimgproc -lopencv_cudafilters -lcudart -lopencv_features2d -lopencv_cudaarithm -L/root/opencv-3.3.0/build/lib -L$(CUDAPATH)/lib64
+$(PROGRAM): $(COBJECTS) $(NOBJECTS)
+	@$(LINKER) $(COBJECTS) $(NOBJECTS) -o $@ $(LFLAGS)
+	@echo $(Yellow)"Linking complete!"$(Color_Off)
+	
+$(COBJECTS): $(OBJDIR)/%.o : %.cpp
+	@$(CC) $(CFLAGS) -c $< -o $@
+	@echo $(Blue)"C++ compiled "$(Purple)$<$(Blue)" successfully!"$(Color_Off)
 
-xiApiPlusOcv.o: xiApiPlusOcv.cpp
-	g++ -c $< -I . -I /root/opencv-3.3.0/build/include -I /root/opencv_contrib-3.3.0/modules/xphoto/include -I /usr/local/cuda/include -g3 -Wall -c -fmessage-length=0
-
-ximeaJetsonGPU.o: ximeaJetsonGPU.cpp
-	g++ -c $< -I .  -I /root/opencv-3.3.0/build/include -I /root/opencv_contrib-3.3.0/modules/xphoto/include -I /usr/local/cuda/include -g3 -Wall -c -fmessage-length=0
+$(NOBJECTS): $(OBJDIR)/%.o : %.cu
+	@$(NVCC) $(NFLAGS) -c $< -o $@
+	@echo $(Green)"CUDA compiled "$(Purple)$<$(Green)" successfully!"$(Color_Off)
 
 runX11: $(PROGRAM)
-	cat ~nvidia/.Xauthority > ~/.Xauthority
-	LD_LIBRARY_PATH=/root/opencv-3.3.0/build/lib DISPLAY=localhost:10.0 ./ximeaJetsonGPU
+	@cat ~nvidia/.Xauthority > ~/.Xauthority
+	@LD_LIBRARY_PATH=/root/opencv-3.3.0/build/lib DISPLAY=localhost:10.0 ./ximeaJetsonGPU
 
 run: $(PROGRAM)
-	cat ~nvidia/.Xauthority > ~/.Xauthority
-	LD_LIBRARY_PATH=/root/opencv-3.3.0/build/lib ./ximeaJetsonGPU
+	@cat ~nvidia/.Xauthority > ~/.Xauthority
+	@LD_LIBRARY_PATH=/root/opencv-3.3.0/build/lib ./ximeaJetsonGPU
 
 runGui: $(PROGRAM)
-	rm -f /tmp/*.png
-	cat ~nvidia/.Xauthority > ~/.Xauthority
-	LD_LIBRARY_PATH=/root/opencv-3.3.0/build/lib DISPLAY=:0 ./ximeaJetsonGPU
+	@rm -f /tmp/*.png
+	@cat ~nvidia/.Xauthority > ~/.Xauthority
+	@LD_LIBRARY_PATH=/root/opencv-3.3.0/build/lib DISPLAY=:0 ./ximeaJetsonGPU
 
 clean:
-	rm -f *.o *~ $(PROGRAM) $(OBJECTS)
+	@rm -f $(PROGRAM) $(COBJECTS) $(NOBJECTS)
+	@echo $(Cyan)"Cleaning Complete!"$(Color_Off)
