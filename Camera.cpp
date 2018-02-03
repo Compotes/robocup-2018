@@ -341,43 +341,84 @@ void update_camera() {
 
         // Ball processing
         bool ballVisible = false;
+        double ballAreaMax = 0;
+        int ballContourIndex = -1;
         for(unsigned int i = 0; i < ballContours.size(); i++ )
         {
             double area = contourArea(ballContours[i]);
             if (area < 200.0) continue;
-            ballVisible = true;
-            if (showImage)
-                drawContours(resultMat, ballContours, i, ballContourColor, 2, 8, ballHierarchy, 0, Point() );
-            Moments m = moments(ballContours[i]);
-            int cx = m.m10 / m.m00;
-            int cy = m.m01 / m.m00;
-
-            ball_x.store(cx);
-            ball_y.store(cy);
+            if (area > ballAreaMax) {
+                ballContourIndex = i;
+                ballVisible = true;
+                ballAreaMax = area;
+            }
         }
-        ball_visible.store(ballVisible);
+
+        if (ballContourIndex > -1) {
+            Moments m = moments(ballContours[ballContourIndex]);
+            ball_x.store(m.m10 / m.m00);
+            ball_y.store(m.m01 / m.m00);
+            ball_visible.store(ballVisible);
+
+            if (showImage) {
+                drawContours(resultMat, ballContours, ballContourIndex, ballContourColor, 2, 8, ballHierarchy, 0, Point() );
+                circle(resultMat, Point(ball_x.load(), ball_y.load()), 5, ballContourColor, 3, 8);
+            }
+        }
 
         // Goal processing
         bool goalVisible = false;
+        double goalAreaMax = 0;
+        int goalContourIndex = -1;
         for(unsigned int i = 0; i < goalContours.size(); i++ )
         {
             double area = contourArea(goalContours[i]);
             if (area < 2000.0) continue;
-            Moments m = moments(goalContours[i]);
-            int cx = m.m10 / m.m00;
-            int cy = m.m01 / m.m00;
-            if (cy > GOAL_CROP_HEIGHT) continue;
-
-            goalVisible = true;
-
-            if (showImage)
-                drawContours(resultMat, goalContours, i, goalContourColor, 2, 8, goalHierarchy, 0, Point() );
-
-            goal_x.store(cx);
-            goal_y.store(cy);
+            if (area > goalAreaMax) {
+                goalContourIndex = i;
+                goalVisible = true;
+                goalAreaMax = area;
+            }
         }
 
-        goal_visible.store(goalVisible);
+        if (goalContourIndex > -1) {
+            Moments m = moments(goalContours[goalContourIndex]);
+            goal_x.store(m.m10 / m.m00);
+            goal_y.store(m.m01 / m.m00);
+            goal_visible.store(goalVisible);
+
+            if (showImage) {
+                drawContours(resultMat, goalContours, goalContourIndex, goalContourColor, 2, 8, goalHierarchy, 0, Point() );
+                circle(resultMat, Point(goal_x.load(), goal_y.load()), 5, goalContourColor, 3, 8);
+            }
+        }
+
+        // // Goal processing
+        // bool goalVisible = false;
+        // double goalAreaMax = 0;
+        // for(unsigned int i = 0; i < goalContours.size(); i++ )
+        // {
+        //     double area = contourArea(goalContours[i]);
+        //     if (area < 2000.0) continue;
+        //     if (area > goalAreaMax) {
+        //         goalVisible = true;
+
+        //         Moments m = moments(goalContours[i]);
+        //         int cx = m.m10 / m.m00;
+        //         int cy = m.m01 / m.m00;
+        //         if (cy > GOAL_CROP_HEIGHT) continue;
+
+        //         if (showImage)
+        //             drawContours(resultMat, goalContours, i, goalContourColor, 2, 8, goalHierarchy, 0, Point() );
+
+        //         goal_x.store(cx);
+        //         goal_y.store(cy);
+        //         
+        //         goalAreaMax = area;
+        //     }
+        // }
+
+        // goal_visible.store(goalVisible);
 
         // Utility
         if (live_stream.load() == 1 && live_stream_frame_count > 50) {
