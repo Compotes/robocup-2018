@@ -14,6 +14,8 @@ atomic<bool> ext_start;
 atomic<bool> ext_kick;
 atomic<bool> ext_send_calibration_data;
 
+bool data_changed = 0;
+
 struct data {
 	uint8_t degree;
 	uint8_t speed;
@@ -104,10 +106,17 @@ void write_protocol() {
 
 	while (true) {
 		uint16_t degree = ext_degree.load();
+		int speed = ext_speed.load();
+		int azimuth = ext_azimuth.load();
+
+		data_changed = false;
+		data_changed = (serial_data.degree == degree % 180) ? 1 : 0;
+		data_changed = (serial_data.speed == speed + 100) ? 1 : 0;
+		data_changed = (serial_data.azimuth == azimuth + 100) ? 1 : 0;
 
 		serial_data.degree = degree % 180;
-		serial_data.speed = ext_speed.load() + 100;
-		serial_data.azimuth = (ext_azimuth.load() + 100);
+		serial_data.speed = speed + 100;
+		serial_data.azimuth = (azimuth + 100);
 
 		if (degree > 180) serial_data.speed += 100;
 
@@ -127,10 +136,12 @@ void write_protocol() {
 			sdPut(CALIBRATION_SPEED);
 			sdPut(CALIBRATION_AZIMUTH);
 		} else {
-			sdPut(MOVE_COMMAND);
-			sdPut(serial_data.degree);
-			sdPut(serial_data.speed);
-			sdPut(serial_data.azimuth);
+			if (data_changed) {
+				sdPut(MOVE_COMMAND);
+				sdPut(serial_data.degree);
+				sdPut(serial_data.speed);
+				sdPut(serial_data.azimuth);
+			}
 		}
 
 		if (ext_start && !start) {

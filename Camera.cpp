@@ -4,9 +4,6 @@ using namespace std;
 using namespace cv;
 using namespace cv::cuda;
 
-#define INPUT_CROP_TOP 30
-#define GOAL_CROP_HEIGHT 400
-
 unsigned int counter = 0;
 unsigned int fps = 0;
 
@@ -44,6 +41,7 @@ Mat goalDilated;
 // BGR
 Scalar ballContourColor = Scalar(0, 0, 255);
 Scalar goalContourColor = Scalar(0, 255, 255);
+Scalar centerContourColor = Scalar(255, 33, 0);
 
 vector<vector<Point> > ballContours, goalContours;
 vector<Vec4i> ballHierarchy, goalHierarchy;
@@ -68,7 +66,7 @@ int showImage, showFpsCount, imageWindowsOn;
 Mat element;
 Ptr<cuda::Filter> erodeFilter;
 Ptr<cuda::Filter> dilateFilter;
-int elementShape = MORPH_RECT;
+int elementShape = MORPH_ELLIPSE;
 float filterArea;
 int dilateMultiplier;
 
@@ -310,7 +308,7 @@ void update_camera() {
         cv::cuda::cvtColor(outGpu, hsvGpu, COLOR_RGB2HSV);
         //inRange_gpu(hsvGpu, hMin, sMin, vMin, hMax, sMax, vMax, thresholded);
         inRange_gpu(hsvGpu,
-                ballInRangeParam.minH, ballInRangeParam.minS, ballInRangeParam.minV, 
+                ballInRangeParam.minH, ballInRangeParam.minS, ballInRangeParam.minV,
                 ballInRangeParam.maxH, ballInRangeParam.maxS, ballInRangeParam.maxV,
                 ballGpuMat);
 
@@ -341,84 +339,114 @@ void update_camera() {
 
         // Ball processing
         bool ballVisible = false;
-        double ballAreaMax = 0;
-        int ballContourIndex = -1;
+        double ballAreaMax[2] = {-1, -1};
+        int ballContourIndex[2] = {-1, -1};
         for(unsigned int i = 0; i < ballContours.size(); i++ )
         {
             double area = contourArea(ballContours[i]);
-            if (area < 200.0) continue;
-            if (area > ballAreaMax) {
-                ballContourIndex = i;
+            if (area < 1200.0) continue;
+            if (area > ballAreaMax[0]) {
+                ballContourIndex[1] = ballContourIndex[0];
+                ballContourIndex[0] = i;
+                ballAreaMax[1] = ballAreaMax[0];
+                ballAreaMax[0] = area;
+
                 ballVisible = true;
-                ballAreaMax = area;
             }
         }
 
-        if (ballContourIndex > -1) {
-            Moments m = moments(ballContours[ballContourIndex]);
-            ball_x.store(m.m10 / m.m00);
-            ball_y.store(m.m01 / m.m00);
-            ball_visible.store(ballVisible);
+        if (ballContourIndex[0] > -1) {
+            int cx = 0;
+            int cy = 0;
+
+            Moments m1 = moments(ballContours[ballContourIndex[0]]);
+            int cx1 = m1.m10 / m1.m00;
+            int cy1 = m1.m01 / m1.m00;
+
+            if (ballContourIndex[1] > -1) {
+                Moments m2 = moments(ballContours[ballContourIndex[1]]);
+                int cx2 = m2.m10 / m2.m00;
+                int cy2 = m2.m01 / m2.m00;
+
+
+				if (abs(cx1 - cx2) < MAX_GOAL_CENTERS_DISTANCE) {
+					cx = (cx1 + cx2) / 2;
+					cy = (cy1 + cy2) / 2;
+				} else {
+					cx = cx1;
+					cy = cy1;
+				}
+            } else {
+                cx = cx1;
+                cy = cy1;
+            }
 
             if (showImage) {
-                drawContours(resultMat, ballContours, ballContourIndex, ballContourColor, 2, 8, ballHierarchy, 0, Point() );
-                circle(resultMat, Point(ball_x.load(), ball_y.load()), 5, ballContourColor, 3, 8);
+                drawContours(resultMat, ballContours, ballContourIndex[0], ballContourColor, 2, 8, ballHierarchy, 0, Point() );
+                drawContours(resultMat, ballContours, ballContourIndex[1], ballContourColor, 2, 8, ballHierarchy, 0, Point() );
+
+                circle(resultMat, Point(cx, cy), 5, centerContourColor, 3, 8);
             }
+
+            ball_x.store(cx);
+            ball_y.store(cy);
         }
+        ball_visible.store(ballVisible);
 
         // Goal processing
         bool goalVisible = false;
-        double goalAreaMax = 0;
-        int goalContourIndex = -1;
+        double goalAreaMax[2] = {-1, -1};
+        int goalContourIndex[2] = {-1, -1};
         for(unsigned int i = 0; i < goalContours.size(); i++ )
         {
             double area = contourArea(goalContours[i]);
-            if (area < 2000.0) continue;
-            if (area > goalAreaMax) {
-                goalContourIndex = i;
+            if (area < 1200.0) continue;
+            if (area > goalAreaMax[0]) {
+                goalContourIndex[1] = goalContourIndex[0];
+                goalContourIndex[0] = i;
+                goalAreaMax[1] = goalAreaMax[0];
+                goalAreaMax[0] = area;
+
                 goalVisible = true;
-                goalAreaMax = area;
             }
         }
 
-        if (goalContourIndex > -1) {
-            Moments m = moments(goalContours[goalContourIndex]);
-            goal_x.store(m.m10 / m.m00);
-            goal_y.store(m.m01 / m.m00);
-            goal_visible.store(goalVisible);
+        if (goalContourIndex[0] > -1) {
+            int cx = 0;
+            int cy = 0;
+
+            Moments m1 = moments(goalContours[goalContourIndex[0]]);
+            int cx1 = m1.m10 / m1.m00;
+            int cy1 = m1.m01 / m1.m00;
+
+            if (goalContourIndex[1] > -1) {
+                Moments m2 = moments(goalContours[goalContourIndex[1]]);
+                int cx2 = m2.m10 / m2.m00;
+                int cy2 = m2.m01 / m2.m00;
+
+
+				if (abs(cx1 - cx2) < MAX_GOAL_CENTERS_DISTANCE) {
+					cx = (cx1 + cx2) / 2;
+					cy = (cy1 + cy2) / 2;
+				} else {
+					cx = cx1;
+					cy = cy1;
+				}
+            } else {
+                cx = cx1;
+                cy = cy1;
+            }
 
             if (showImage) {
-                drawContours(resultMat, goalContours, goalContourIndex, goalContourColor, 2, 8, goalHierarchy, 0, Point() );
-                circle(resultMat, Point(goal_x.load(), goal_y.load()), 5, goalContourColor, 3, 8);
+                drawContours(resultMat, goalContours, goalContourIndex[0], goalContourColor, 2, 8, goalHierarchy, 0, Point() );
+                drawContours(resultMat, goalContours, goalContourIndex[1], goalContourColor, 2, 8, goalHierarchy, 0, Point() );
+                circle(resultMat, Point(cx, cy), 5, centerContourColor, 3, 8);
             }
+
+            goal_x.store(cx);
+            goal_y.store(cy);
         }
-
-        // // Goal processing
-        // bool goalVisible = false;
-        // double goalAreaMax = 0;
-        // for(unsigned int i = 0; i < goalContours.size(); i++ )
-        // {
-        //     double area = contourArea(goalContours[i]);
-        //     if (area < 2000.0) continue;
-        //     if (area > goalAreaMax) {
-        //         goalVisible = true;
-
-        //         Moments m = moments(goalContours[i]);
-        //         int cx = m.m10 / m.m00;
-        //         int cy = m.m01 / m.m00;
-        //         if (cy > GOAL_CROP_HEIGHT) continue;
-
-        //         if (showImage)
-        //             drawContours(resultMat, goalContours, i, goalContourColor, 2, 8, goalHierarchy, 0, Point() );
-
-        //         goal_x.store(cx);
-        //         goal_y.store(cy);
-        //         
-        //         goalAreaMax = area;
-        //     }
-        // }
-
-        // goal_visible.store(goalVisible);
+        goal_visible.store(goalVisible);
 
         // Utility
         if (live_stream.load() == 1 && live_stream_frame_count > 50) {

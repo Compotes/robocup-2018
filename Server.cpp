@@ -7,7 +7,9 @@ int A[20];
 string html = "";
 bool go = false;
 
+atomic<int> robot_speed;
 map<string, string> arguments;
+map<string, string> json_data;
 
 void load_html_for_server() {
 	fstream html_file;
@@ -65,7 +67,7 @@ int web(int fd) {
 			arguments["calibrate"] = "0";
 		}
 
-		if (arguments["go"] == "1") {
+		/*if (arguments["go"] == "1") {
 			if(ext_start.load()){
 				ext_start.store(false);
 			} else {
@@ -73,11 +75,11 @@ int web(int fd) {
 			}
 
 			arguments["go"] = "0";
-		}
+		}*/
 
-		if (arguments["set_compass_nord"] == "1") {
+		if (arguments["set_compass_north"] == "1") {
 			compass_zero.store((compass_zero.load()+compass_degree.load()) % 360);
-			arguments["set_compass_nord"] = "0";
+			arguments["set_compass_north"] = "0";
 		}
 
 		if(arguments["live_stream"] == "1") {
@@ -102,15 +104,54 @@ int web(int fd) {
 		}
 	}
 
+	if(!strncmp(buffer, "GET /data?", 10)) {
+		for(int i = 9; buffer[i] != ' ';) {
+			string var = "", val = "";
+			i++;
+			while(buffer[i] != '=') {
+				var += buffer[i];
+				i++;
+			}
+
+			i++;
+			while(buffer[i] != '&' && buffer[i] != ' ') {
+				val += buffer[i];
+				i++;
+			}
+
+			json_data[var] = val;
+		}
+
+		int _robot_speed = atoi(json_data["robot_speed"].c_str());
+		if (_robot_speed != robot_speed.load()) {
+			robot_speed.store(_robot_speed);
+		}
+
+		if (json_data["go"] == "1") {
+			if(ext_start.load()){
+				ext_start.store(false);
+			} else {
+				ext_start.store(true);
+			}
+			json_data["go"] = "0";
+		}
+	}
+
 	size+=1;
 	size%=500;
 
 	if(!strncmp(buffer, "GET /frame",10) || !strncmp(buffer,"get /frame",10)) {
 		//sprintf(bufer,"<html><meta http-equiv='refresh' content='0'>frames: %d<br>degree: %d<br><svg width='1100' height='600'><rect width='100%%' height='100%%' fill='red'/><circle cx='200' cy='200' r='%d' stroke='red' stroke-width='4' fill='yellow' /></svg></html>", frame_rate.load(), compass_degree.load(), size);
-        sprintf(bufer,"<html><meta http-equiv='refresh' content='0'>frames: %d<br>degree: %d<br><img src='127.0.0.1:3000/obr.jpg'></html>", frame_rate.load(), compass_degree.load(), size);
+        sprintf(bufer,"<html><meta http-equiv='refresh' content='0'>frames: %d<br>degree: %d<br><img src='127.0.0.1:3000/obr.jpg'></html>", frame_rate.load(), ext_azimuth.load()+100, size);
         sprintf(buffer,"HTTP/1.1 200 OK\nServer: nweb/%d.0\nContent-Length: %ld\nConnection: close\nContent-Type: html\n\n", VERSION, strlen(bufer)); /* Header + a blank line */
 		write(fd,buffer,strlen(buffer));
 		write(fd,bufer,strlen(bufer));
+	} else if(strstr(buffer, "GET /data")) {
+		string display_robot_speed = json_data["robot_speed"];
+		sprintf(buffer,"HTTP/1.1 200 OK\nServer: nweb/%d.0\nContent-Length: %ld\nConnection: close\nContent-Type: html\n\n", VERSION, strlen(display_robot_speed.c_str())); /* Header + a blank line */
+		sprintf(bufer, display_robot_speed.c_str());
+		write(fd,buffer,strlen(buffer));
+		write(fd, bufer, strlen(display_robot_speed.c_str()));
 	} else if(strstr(buffer, ".jpg") || strstr(buffer, ".jpeg")) {
 		FILE *fp;
 		fp = fopen("/mnt/ramdisk/obr.jpg", "rb");

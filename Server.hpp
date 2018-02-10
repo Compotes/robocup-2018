@@ -29,6 +29,8 @@
 #define FORBIDDEN 403
 #define NOTFOUND  404
 
+extern atomic<int> robot_speed;
+
 void init_server();
 
 #endif

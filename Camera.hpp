@@ -16,6 +16,9 @@
 #define FILTER 256
 #define HEIGHT 1032
 #define WIDTH 772
+#define INPUT_CROP_TOP 30
+#define GOAL_CROP_HEIGHT 400
+#define MAX_GOAL_CENTERS_DISTANCE 300
 
 extern atomic<int> frame_rate;
 extern atomic<int> live_stream;

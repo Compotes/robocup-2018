@@ -5,14 +5,25 @@
 		<!-- <meta http-equiv="refresh" content="1"> -->
 	</head>
 	<script>
-		/*window.onload = function() {
-			var image = document.getElementById("svg");
-			function updateImage() {
-				image.src = image.src;
-			}
-			//setTimeout(updateImage,5);
-			setInterval(updateImage, 100);
-		}*/
+		function sendData(name, value, setValueCallback, innerHTML = 0) {
+			var request = new XMLHttpRequest();
+			var url = "/data?" + name + "=" + value;
+
+			request.onreadystatechange = function() {
+				if (this.readyState == 4 && this.status == 200) {
+					if (setValueCallback != 0) {
+						if (innerHTML)
+							document.getElementById(setValueCallback).value = this.responseText;
+						else
+							document.getElementById(setValueCallback).innerHTML = this.responseText;
+					}
+				}
+			};
+
+			request.open("GET", url, true);
+			request.send();
+		}
+
 		function SubmitFunc() {
 			document.getElementById("Form").submit();
 		}
@@ -20,13 +31,20 @@
 <body>
 
 <form id="Form" method="get" style="float: left">
-	<input type="range" name="range_value" min="0" max="255" step="1" value="14">
-	<br>
 	<input type="text" name="firstname" value="Mickey">
 	<br>
 	<input type="text" name="lastname" value="Mouse">
 	<br><br>
 	<input type="submit" value="Submit">
+</form>
+
+<form>
+<p id="robot_speed_l">20</p>
+<input id="robot_speed" type="range"
+	   onchange="sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l')"
+	   oninput="sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l')"
+	   name="range_value" min="0" max="100" step="1" value="20">
+<br>
 </form>
 
 <form>
@@ -50,7 +68,7 @@
 </form>
 
 <form>
-<button type="submit" name="set_compass_nord" value="1">Set compass nord</button>
+<button type="submit" name="set_compass_north" value="1">Set compass north</button>
 </form>
 
 <form>
@@ -58,7 +76,7 @@
 </form>
 
 <form>
-<button type="submit" name="go" value="1">GO</button>
+<button type="button" id="go" onclick="sendData('go', '1', 0)" name="go" value="1">GO</button>
 </form>
 
 </body>
