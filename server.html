@@ -2,7 +2,20 @@
 <html>
 	<head>
 		<meta charset="UTF-8">
-		<!-- <meta http-equiv="refresh" content="1"> -->
+		<!-- Latest compiled and minified CSS -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+		integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+		crossorigin="anonymous">
+
+		<!-- Optional theme -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+		integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp"
+		crossorigin="anonymous">
+
+		<!-- Latest compiled and minified JavaScript -->
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+		integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+		crossorigin="anonymous"></script>
 	</head>
 	<script>
 		function sendData(name, value, setValueCallback, innerHTML = 0) {
@@ -28,56 +41,129 @@
 			document.getElementById("Form").submit();
 		}
 	</script>
-<body>
 
-<form id="Form" method="get" style="float: left">
-	<input type="text" name="firstname" value="Mickey">
-	<br>
-	<input type="text" name="lastname" value="Mouse">
-	<br><br>
-	<input type="submit" value="Submit">
-</form>
+<style>
+	button {
+		margin: 2px;
+		height:200px;
+		width:200px;
+	}
 
-<form>
-<p id="robot_speed_l">20</p>
-<input id="robot_speed" type="range"
-	   onchange="sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l')"
-	   oninput="sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l')"
-	   name="range_value" min="0" max="100" step="1" value="20">
-<br>
-</form>
+	table {
+		width: 90%;
+		margin-left:2px;
+		color: black;
+	}
 
-<form>
-<button type="submit" name="kick" value="1">kick</button>
-</form>
+	.wrapper {
+		text-align: center;
+	}
 
-<form>
-<button onclick="window.open('/obr.jpg', '_blank')">OPEN LIVE STREAM</button>
-</form>
+	.buttons {
+		display: inline-block;
+	}
 
-<form>
-<button type="submit" name="load_values" value="1">load calibration values</button>
-</form>
+	th {
+		padding: 2px;
+	}
 
-<form>
-<button type="submit" name="reload_server" value="1">reload server html</button>
-</form>
+	.slidecontainer {
+		width: 100%;
+	}
 
-<form>
-<button type="submit" name="live_stream" value="1">turn on/off livestream</button>
-</form>
+	.slider {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 100%;
+		height: 25px;
+		background: #d3d3d3;
+		outline: none;
+		opacity: 0.7;
+		-webkit-transition: .2s;
+		transition: opacity .2s;
+	}
 
-<form>
-<button type="submit" name="set_compass_north" value="1">Set compass north</button>
-</form>
+	.slider:hover {
+		opacity: 1;
+	}
 
-<form>
-<button type="submit" name="calibrate" value="1">Calibrate</button>
-</form>
+	.slider::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 25px;
+		height: 25px;
+		background: #ff0000;
+		cursor: pointer;
+	}
 
-<form>
-<button type="button" id="go" onclick="sendData('go', '1', 0)" name="go" value="1">GO</button>
-</form>
+	.slider::-moz-range-thumb {
+		width: 25px;
+		height: 25px;
+		background: #ff0000;
+		cursor: pointer;
+	}
+</style>
 
+<body class="container">
+	<div class="jumbotron">
+		<table>
+		  <tr>
+			<th>
+				<form style="border: 1px solid silver">
+				<p>robot speed:</p>
+				<p id="robot_speed_l">20</p>
+				<input id="robot_speed" type="range" class="slider"
+					   onchange="sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l')"
+					   oninput="sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l')"
+					   name="range_value" min="0" max="100" step="1" value="20">
+				</form>
+			</th>
+			  <th>
+				<form style="border: 1px solid silver">
+				<p>dribbler speed:</p>
+				<p id="dribbler_speed_l">0</p>
+				<input id="dribbler_speed" type="range" class="slider"
+					   onchange="sendData('dribbler_speed', document.getElementById('dribbler_speed').value,'dribbler_speed_l')"
+					   oninput="sendData('dribbler_speed', document.getElementById('dribbler_speed').value,'dribbler_speed_l')"
+					   name="range_value" min="-100" max="100" step="1" value="0">
+				</form>
+			  </th>
+		  </tr>
+		</table>
+	</div>
+	<div class="wrapper">
+		<div class="buttons">
+			<table>
+			  <tr>
+				<button type="button" id="go"
+				onclick="sendData('go', '1', 0)" name="go" value="1">GO</button>
+			  </tr>
+			  <tr>
+				<button type="button" id="go_dribbler"
+					onclick="sendData('go_dribbler', '1', 0)" name="go_dribbler" value="1">GO DRIBBLER</button>
+			  </tr>
+			  <tr>
+				<form>
+					<button type="submit" name="kick" value="1">KICK</button>
+				</form>
+			  </tr>
+			  <tr>
+				<form>
+					<button type="submit" name="set_compass_north" value="1">SET COMPASS</button>
+				</form>
+			  </tr>
+			  <tr>
+				<form>
+					<button type="submit" name="reload_server" value="1">RELOAD HTML</button>
+				</form>
+			  </tr>
+			  <tr>
+				<form>
+					<button type="submit" name="calibrate" value="1">CALIBRATE LINES</button>
+				</form>
+			  </tr>
+			</table>
+		</div>
+	</div>
 </body>
 </html>

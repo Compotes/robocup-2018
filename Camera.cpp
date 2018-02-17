@@ -43,7 +43,7 @@ Scalar ballContourColor = Scalar(0, 0, 255);
 Scalar goalContourColor = Scalar(0, 255, 255);
 Scalar centerContourColor = Scalar(255, 33, 0);
 
-vector<vector<Point> > ballContours, goalContours;
+vector<vector<Point>> ballContours, goalContours;
 vector<Vec4i> ballHierarchy, goalHierarchy;
 
 atomic<int> frame_rate;
@@ -70,6 +70,7 @@ int elementShape = MORPH_ELLIPSE;
 float filterArea;
 int dilateMultiplier;
 
+#define CALIBRATION true
 
 struct timespec t0, t1;
 
@@ -107,17 +108,17 @@ void stop() {
 }
 
 int debugCounter = 0;
-void debugImage(Mat *resultMat) {
+void debugImage(Mat *result) {
     if (debugCounter > showFpsCount+1) {
         char fpsStr[32];
         sprintf(fpsStr, "%10d", fps);
         rectangle(mat, Point2f(0, 0), Point2f(200, 40), Scalar(255, 255, 255, 255), CV_FILLED);
         putText(mat, fpsStr, Point2f(0, 30), FONT_HERSHEY_PLAIN, 2, Scalar(0,0,0,255));
 
-        imshow("input", mat);
+        imshow("input", resultMat);
 
-        if (resultMat != NULL)
-            imshow("result", *resultMat);
+        if (result != NULL)
+            imshow("result", *result);
 
         debugCounter = 0;
     } else
@@ -287,6 +288,14 @@ void update_filters(int, void*) {
     dilateFilter = cuda::createMorphologyFilter(MORPH_DILATE, CV_8U, element);
 }
 
+void write_to_livestream() {
+	string pipeline = "appsrc ! videoconvert ! vp8enc ! webmmux ! shout2send ip=127.0.0.1 port=1234 password=hackme mount=/s";
+	VideoWriter writer(pipeline, 0, (double)25, cv::Size(1032, 772), false);
+	while(true) {
+		writer << ballDilated;
+	}
+}
+
 void update_camera() {
     counter = 0;
     clock_gettime(CLOCK_REALTIME, &t0);
@@ -297,7 +306,10 @@ void update_camera() {
 
     update_filters(0, NULL);
 
-    int live_stream_frame_count = 0;
+    //int live_stream_frame_count = 0;
+
+	/*thread live_stream_thread(write_to_livestream);
+	live_stream_thread.detach();*/
 
     for (;;) {
         mat = cam.GetNextImageOcvMat();
@@ -327,10 +339,11 @@ void update_camera() {
         dilateFilter->apply(goalErodeMat, goalDilateMat);
 
         ballDilateMat.download(ballDilated);
-        goalDilateMat.download(goalDilated);
 
-        findContours(ballDilated, ballContours, ballHierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
-        findContours(goalDilated, goalContours, goalHierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+        findContours(ballDilated, ballContours, ballHierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+        int center_x = goal_detect(goalDilateMat);
+
+        //findContours(goalDilated, goalContours, goalHierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
         if (showImage)
             outGpu.download(resultMat); // DEBUG
@@ -341,10 +354,10 @@ void update_camera() {
         bool ballVisible = false;
         double ballAreaMax[2] = {-1, -1};
         int ballContourIndex[2] = {-1, -1};
-        for(unsigned int i = 0; i < ballContours.size(); i++ )
+        for(unsigned int i = 0; i < ballContours.size(); i++)
         {
             double area = contourArea(ballContours[i]);
-            if (area < 1200.0) continue;
+            if (area < 200.0) continue;
             if (area > ballAreaMax[0]) {
                 ballContourIndex[1] = ballContourIndex[0];
                 ballContourIndex[0] = i;
@@ -367,7 +380,6 @@ void update_camera() {
                 Moments m2 = moments(ballContours[ballContourIndex[1]]);
                 int cx2 = m2.m10 / m2.m00;
                 int cy2 = m2.m01 / m2.m00;
-
 
 				if (abs(cx1 - cx2) < MAX_GOAL_CENTERS_DISTANCE) {
 					cx = (cx1 + cx2) / 2;
@@ -394,13 +406,13 @@ void update_camera() {
         ball_visible.store(ballVisible);
 
         // Goal processing
-        bool goalVisible = false;
+        /*bool goalVisible = false;
         double goalAreaMax[2] = {-1, -1};
         int goalContourIndex[2] = {-1, -1};
         for(unsigned int i = 0; i < goalContours.size(); i++ )
         {
             double area = contourArea(goalContours[i]);
-            if (area < 1200.0) continue;
+            if (area < 150.0) continue;
             if (area > goalAreaMax[0]) {
                 goalContourIndex[1] = goalContourIndex[0];
                 goalContourIndex[0] = i;
@@ -415,26 +427,23 @@ void update_camera() {
             int cx = 0;
             int cy = 0;
 
-            Moments m1 = moments(goalContours[goalContourIndex[0]]);
-            int cx1 = m1.m10 / m1.m00;
-            int cy1 = m1.m01 / m1.m00;
+			int maxX = 0, minX = 1032;
+			for (unsigned int i = 0; i < goalContours[goalContourIndex[0]].size(); i++) {
+				if (goalContours[goalContourIndex[0]][i].x > maxX) maxX = goalContours[goalContourIndex[0]][i].x;
+				if (goalContours[goalContourIndex[0]][i].x < minX) minX = goalContours[goalContourIndex[0]][i].x;
+			}
 
             if (goalContourIndex[1] > -1) {
-                Moments m2 = moments(goalContours[goalContourIndex[1]]);
-                int cx2 = m2.m10 / m2.m00;
-                int cy2 = m2.m01 / m2.m00;
-
-
-				if (abs(cx1 - cx2) < MAX_GOAL_CENTERS_DISTANCE) {
-					cx = (cx1 + cx2) / 2;
-					cy = (cy1 + cy2) / 2;
-				} else {
-					cx = cx1;
-					cy = cy1;
+				int maxX2 = 0, minX2 = 1032;
+				for (unsigned int i = 0; i < goalContours[goalContourIndex[1]].size(); i++) {
+					if (goalContours[goalContourIndex[1]][i].x > maxX2) maxX2 = goalContours[goalContourIndex[1]][i].x;
+					if (goalContours[goalContourIndex[1]][i].x < minX2) minX2 = goalContours[goalContourIndex[1]][i].x;
 				}
+				cx = (min(minX, minX2) + max(maxX, maxX2))/2;
+				cy = 350;
             } else {
-                cx = cx1;
-                cy = cy1;
+				cx = (maxX + minX)/2;
+				cy = 350;
             }
 
             if (showImage) {
@@ -446,14 +455,24 @@ void update_camera() {
             goal_x.store(cx);
             goal_y.store(cy);
         }
-        goal_visible.store(goalVisible);
+        goal_visible.store(goalVisible);*/
+
+        /*rectangle(resultMat, Point(792, 0), Point(822, 772), Scalar(0, 0, 255), 2, 8);
+		rectangle(resultMat, Point(0, 0), Point(1032, 500), Scalar(0, 0, 255), 2, 8);*/
+		rectangle(resultMat, Point(center_x, 0), Point(center_x, 772), Scalar(0, 0, 255), 2, 8);
+		if (center_x == -1) goal_visible.store(false);
+		else goal_visible.store(true);
+
+		goal_x.store(center_x);
+
+		if(CALIBRATION && showImage) {
+			goalDilateMat.download(goalDilated);
+			createImageWindows();
+			debugImage(&goalDilated);
+			continue;
+		}
 
         // Utility
-        if (live_stream.load() == 1 && live_stream_frame_count > 50) {
-            imwrite("/mnt/ramdisk/obr.jpg", resultMat);
-            live_stream_frame_count = 0;
-        }
-
         if (showImage) {
             createImageWindows();
             outGpu.download(mat);
@@ -463,8 +482,6 @@ void update_camera() {
             destroyImageWindows();
             if (cv::waitKey(1) == 27) {stop();}
         }
-
-        live_stream_frame_count++;
     }
     stop();
 }

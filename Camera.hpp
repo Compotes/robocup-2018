@@ -6,9 +6,11 @@
 #include <fstream>
 #include <string>
 #include <atomic>
+#include <opencv2/videoio.hpp>
 
 #include "xiApiPlusOcv.hpp"
 #include "inRangeGPU.cuh"
+#include "goal.cuh"
 #include "Compass.hpp"
 
 #define EXPOSURE_TIME 10000

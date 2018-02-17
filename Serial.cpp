@@ -5,14 +5,18 @@ struct termios tty;
 int fd;
 bool calibrating = false;
 bool start = false;
+bool dribbler_start = false;
 
 atomic<int> ext_degree;
 atomic<int> ext_speed;
+atomic<int> ext_dribbler_speed;
 atomic<int> ext_azimuth;
 atomic<bool> ext_calibration;
 atomic<bool> ext_start;
+atomic<bool> ext_dribbler_start;
 atomic<bool> ext_kick;
 atomic<bool> ext_send_calibration_data;
+atomic<bool> ext_turn_off_dribbler;
 
 bool data_changed = 0;
 
@@ -23,7 +27,7 @@ struct data {
 } serial_data;
 
 int init_serial() {
-	char *portname = "/dev/ttyTHS2";
+	const char *portname = "/dev/ttyTHS2";
 	fd = open (portname, O_RDWR | O_NOCTTY | O_SYNC);
 	set_interface_attribs (fd, B115200, 0);
 
@@ -102,12 +106,38 @@ void read_protocol() {
 	}
 }
 
+unsigned int serialCounter = 0;
+unsigned int serialFps = 0;
+struct timespec serialT0, serialT1;
+
+void serialMeasureFps() {
+    clock_gettime(CLOCK_REALTIME, &serialT1);
+    uint64_t deltaTime = (serialT1.tv_sec - serialT0.tv_sec) * 1000000 + (serialT1.tv_nsec - serialT0.tv_nsec) / 1000 / 1000;
+    serialCounter++;
+    if (deltaTime > 1000) {
+        serialFps = serialCounter;
+        printf(" SERIAL FPS:%10d ", serialFps);
+        serialCounter = 0;
+        serialT0 = serialT1;
+    }
+}
+
 void write_protocol() {
 
 	while (true) {
-		uint16_t degree = ext_degree.load();
+		int16_t degree = ext_degree.load();
 		int speed = ext_speed.load();
+		int dribbler_speed = ext_dribbler_speed.load() + 100;
 		int azimuth = ext_azimuth.load();
+		if (degree >= 180) {
+			degree -= 180;
+			speed = -speed;
+		}
+
+		if (degree < 0) {
+			speed = -speed;
+			degree = 180+degree;
+		}
 
 		data_changed = false;
 		data_changed = (serial_data.degree == degree % 180) ? 1 : 0;
@@ -141,7 +171,18 @@ void write_protocol() {
 				sdPut(serial_data.degree);
 				sdPut(serial_data.speed);
 				sdPut(serial_data.azimuth);
+				//cout << serial_data.azimuth -100 << '\n';
 			}
+		}
+
+		if (ext_dribbler_start && !dribbler_start) {
+			dribbler_start = true;
+			sdPut(DRIBBLER_START_COMMAND);
+			sdPut(dribbler_speed);
+		} else if (!ext_dribbler_start && dribbler_start) {
+			dribbler_start = false;
+			sdPut(DRIBBLER_START_COMMAND);
+			sdPut(DRIBBLER_STOP_SPEED);
 		}
 
 		if (ext_start && !start) {
@@ -167,6 +208,8 @@ void write_protocol() {
 
 			ext_send_calibration_data.store(false);
 		}
+		serialMeasureFps();
+		this_thread::sleep_for(chrono::milliseconds(10));
 	}
 }
 

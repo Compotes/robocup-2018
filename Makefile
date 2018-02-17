@@ -13,13 +13,13 @@ COBJECTS := $(CSOURCES:%.cpp=$(OBJDIR)/%.o)
 #CUDA compiler
 NVCC = /usr/local/cuda-8.0/bin/nvcc
 CUDAPATH = /usr/local/cuda-8.0
-NFLAGS = -ccbin g++ -m64 -gencode arch=compute_53,code=sm_53 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_62,code=sm_62 -gencode arch=compute_62,code=compute_62 
+NFLAGS = -ccbin g++ -std=c++11 -m64 -gencode arch=compute_53,code=sm_53 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_62,code=sm_62 -gencode arch=compute_62,code=compute_62
 NSOURCES := $(wildcard *.cu)
 NOBJECTS := $(NSOURCES:%.cu=$(OBJDIR)/%.o)
 
 #linker
 LINKER = g++
-LFLAGS = -lm3api -lopencv_core -lopencv_highgui -lRTIMULib -lopencv_imgproc -lopencv_imgcodecs -lopencv_cudaimgproc -lopencv_cudafilters -lcudart -lopencv_features2d -lopencv_cudaarithm -lopencv_cudalegacy -L/root/opencv-3.3.0/build/lib -L$(CUDAPATH)/lib64 -std=c++11 -lpthread
+LFLAGS = -lm3api -lopencv_core -lopencv_videoio -lopencv_highgui -lRTIMULib -lopencv_imgproc -lopencv_imgcodecs -lopencv_cudaimgproc -lopencv_cudafilters -lcudart -lopencv_features2d -lopencv_cudaarithm -lopencv_cudalegacy -L/root/opencv-3.3.0/build/lib -L$(CUDAPATH)/lib64 -std=c++11 -lpthread
 
 # colors
 Color_Off='\033[0m'
@@ -38,12 +38,14 @@ all: $(PROGRAM)
 $(PROGRAM): $(COBJECTS) $(NOBJECTS)
 	@$(LINKER) $(COBJECTS) $(NOBJECTS) -o $@ $(LFLAGS)
 	@echo $(Yellow)"Linking complete!"$(Color_Off)
-	
+
 $(COBJECTS): $(OBJDIR)/%.o : %.cpp
+	@echo $(Blue)"C++ compiling "$(Purple)$<$(Color_Off)
 	@$(CC) $(CFLAGS) -c $< -o $@
 	@echo $(Blue)"C++ compiled "$(Purple)$<$(Blue)" successfully!"$(Color_Off)
 
 $(NOBJECTS): $(OBJDIR)/%.o : %.cu
+	@echo $(Green)"CUDA compiling "$(Purple)$<$(Color_Off)
 	@$(NVCC) $(NFLAGS) -c $< -o $@
 	@echo $(Green)"CUDA compiled "$(Purple)$<$(Green)" successfully!"$(Color_Off)
 
