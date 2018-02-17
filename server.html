@@ -18,6 +18,8 @@
 		crossorigin="anonymous"></script>
 	</head>
 	<script>
+		var go = false;
+
 		function sendData(name, value, setValueCallback, innerHTML = 0) {
 			var request = new XMLHttpRequest();
 			var url = "/data?" + name + "=" + value;
@@ -40,6 +42,47 @@
 		function SubmitFunc() {
 			document.getElementById("Form").submit();
 		}
+
+		function updateSlider(id) {
+			if (document.getElementById(id).value > 0) {
+				document.getElementById(id).classList.add("slider-green");
+				document.getElementById(id).classList.remove("slider-red");
+				document.getElementById(id).classList.remove("slider-neutral");
+			} else if (document.getElementById(id).value == 0){
+				document.getElementById(id).classList.add("slider-neutral");
+				document.getElementById(id).classList.remove("slider-green");
+				document.getElementById(id).classList.remove("slider-red");
+			} else {
+				document.getElementById(id).classList.add("slider-red");
+				document.getElementById(id).classList.remove("slider-green");
+				document.getElementById(id).classList.remove("slider-neutral");
+			}
+		}
+
+		function rgb(r,g,b, def) {
+def = parseInt(def, 10) || 0;
+    return 'rgb(' + [(r||def),(g||def),(b||def)].join(',') + ')';
+}
+
+		function updateRobotSpeedSlider() {
+			var r = document.getElementById("robot_speed").value / 100 * 255;
+			document.getElementById("robot_speed").style.backgroundColor = 'rgb(0,' + parseInt(r) +',0)';
+			console.log('rgb(' + parseInt(r) + ',0,0)');
+		}
+
+		function updateRobotSpeed() {
+			go = !go;
+
+			if (go) {
+				document.getElementById("robot_speed").classList.add("slider-green");
+				document.getElementById("robot_speed").classList.remove("slider-red");
+				document.getElementById("robot_speed").classList.remove("slider-neutral");
+			} else {
+				document.getElementById("robot_speed").classList.add("slider-neutral");
+				document.getElementById("robot_speed").classList.remove("slider-green");
+				document.getElementById("robot_speed").classList.remove("slider-red");
+			}
+		}
 	</script>
 
 <style>
@@ -53,6 +96,12 @@
 		width: 90%;
 		margin-left:2px;
 		color: black;
+	}
+
+	form {
+		border: 1px solid silver;
+		border-radius: 10px;
+		text-align:center;
 	}
 
 	.wrapper {
@@ -71,36 +120,57 @@
 		width: 100%;
 	}
 
-	.slider {
+	.slider-default {
 		-webkit-appearance: none;
 		appearance: none;
 		width: 100%;
 		height: 25px;
-		background: #d3d3d3;
 		outline: none;
 		opacity: 0.7;
 		-webkit-transition: .2s;
 		transition: opacity .2s;
 	}
 
-	.slider:hover {
+	.slider-default:hover {
 		opacity: 1;
 	}
 
-	.slider::-webkit-slider-thumb {
+	.slider-green::-webkit-slider-thumb {
+		background: #00FF00;
+	}
+
+	.slider-red::-webkit-slider-thumb {
+		background: #ff0000;
+	}
+
+	.slider-green::-moz-range-thumb {
+		background: #00FF00;
+	}
+
+	.slider-red::-moz-range-thumb {
+		background: #ff0000;
+	}
+
+	.slider-default::-moz-range-thumb {
+		width: 25px;
+		height: 25px;
+		cursor: pointer;
+	}
+
+	.slider-default::-webkit-slider-thumb {
 		-webkit-appearance: none;
 		appearance: none;
 		width: 25px;
 		height: 25px;
-		background: #ff0000;
 		cursor: pointer;
 	}
 
-	.slider::-moz-range-thumb {
-		width: 25px;
-		height: 25px;
-		background: #ff0000;
-		cursor: pointer;
+	.slider-neutral::-webkit-slider-thumb {
+		background: #000000;
+	}
+
+	.slider-neutral::-moz-range-thumb {
+		background: #000000;
 	}
 </style>
 
@@ -109,22 +179,22 @@
 		<table>
 		  <tr>
 			<th>
-				<form style="border: 1px solid silver">
+				<form>
 				<p>robot speed:</p>
 				<p id="robot_speed_l">20</p>
-				<input id="robot_speed" type="range" class="slider"
-					   onchange="sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l')"
-					   oninput="sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l')"
+				<input id="robot_speed" type="range" class="slider-default slider-neutral"
+					   onchange="updateRobotSpeedSlider(); sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l');"
+					   oninput="updateRobotSpeedSlider(); sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l')"
 					   name="range_value" min="0" max="100" step="1" value="20">
 				</form>
 			</th>
 			  <th>
-				<form style="border: 1px solid silver">
+				<form>
 				<p>dribbler speed:</p>
 				<p id="dribbler_speed_l">0</p>
-				<input id="dribbler_speed" type="range" class="slider"
-					   onchange="sendData('dribbler_speed', document.getElementById('dribbler_speed').value,'dribbler_speed_l')"
-					   oninput="sendData('dribbler_speed', document.getElementById('dribbler_speed').value,'dribbler_speed_l')"
+				<input id="dribbler_speed" type="range" class="slider-default slider-neutral"
+					   onchange="updateSlider('dribbler_speed'); sendData('dribbler_speed', document.getElementById('dribbler_speed').value,'dribbler_speed_l')"
+					   oninput="updateSlider('dribbler_speed'); sendData('dribbler_speed', document.getElementById('dribbler_speed').value,'dribbler_speed_l')"
 					   name="range_value" min="-100" max="100" step="1" value="0">
 				</form>
 			  </th>
@@ -136,7 +206,7 @@
 			<table>
 			  <tr>
 				<button type="button" id="go"
-				onclick="sendData('go', '1', 0)" name="go" value="1">GO</button>
+				onclick="updateRobotSpeed(); sendData('go', '1', 0)" name="go" value="1">GO</button>
 			  </tr>
 			  <tr>
 				<button type="button" id="go_dribbler"
