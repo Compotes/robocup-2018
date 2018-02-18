@@ -289,12 +289,16 @@ void update_filters(int, void*) {
 }
 
 void write_to_livestream() {
-	string pipeline = "appsrc ! videoconvert ! vp8enc ! webmmux ! shout2send ip=127.0.0.1 port=1234 password=hackme mount=/s";
+	//string pipeline = "appsrc ! videoconvert ! vp8enc ! webmmux ! shout2send ip=127.0.0.1 port=1234 password=hackme mount=/s";
+	string pipeline = "appsrc ! udpsink host=localhost port=9999";
 	VideoWriter writer(pipeline, 0, (double)25, cv::Size(1032, 772), false);
 	while(true) {
 		writer << ballDilated;
 	}
 }
+
+string pipeline = "appsrc ! videoconvert ! videoscale ! video/x-raw,width=500 ! clockoverlay shaded-background=true font-desc=\"Sans 38\" ! x264enc tune=\"zerolatency\" threads=1 ! tcpserversink port=4444";
+VideoWriter writer(pipeline, 0, (double)25, cv::Size(1032, 772), false);
 
 void update_camera() {
     counter = 0;
@@ -308,8 +312,8 @@ void update_camera() {
 
     //int live_stream_frame_count = 0;
 
-	/*thread live_stream_thread(write_to_livestream);
-	live_stream_thread.detach();*/
+	//thread live_stream_thread(write_to_livestream);
+	//live_stream_thread.detach();
 
     for (;;) {
         mat = cam.GetNextImageOcvMat();
@@ -339,6 +343,7 @@ void update_camera() {
         dilateFilter->apply(goalErodeMat, goalDilateMat);
 
         ballDilateMat.download(ballDilated);
+        writer << ballDilated;
 
         findContours(ballDilated, ballContours, ballHierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
         int center_x = goal_detect(goalDilateMat);

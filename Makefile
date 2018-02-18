@@ -1,6 +1,5 @@
 #program name
-PROGRAM=ximeaJetsonGPU
-
+PROGRAM=ximeaJetsonGPU 
 #build file
 OBJDIR = build
 
@@ -61,6 +60,9 @@ runGui: $(PROGRAM)
 	@rm -f /tmp/*.png
 	@cat ~nvidia/.Xauthority > ~/.Xauthority
 	@LD_LIBRARY_PATH=/root/opencv-3.3.0/build/lib DISPLAY=:0 ./ximeaJetsonGPU
+
+watch: $(PROGRAM)
+	@gst-launch-1.0 tcpclientsrc port=4444 host=localhost ! h264parse ! avdec_h264 ! glimagesink
 
 clean:
 	@rm -f $(PROGRAM) $(COBJECTS) $(NOBJECTS)

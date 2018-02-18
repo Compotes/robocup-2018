@@ -60,9 +60,9 @@
 		}
 
 		function rgb(r,g,b, def) {
-def = parseInt(def, 10) || 0;
-    return 'rgb(' + [(r||def),(g||def),(b||def)].join(',') + ')';
-}
+			def = parseInt(def, 10) || 0;
+			return 'rgb(' + [(r||def),(g||def),(b||def)].join(',') + ')';
+		}
 
 		function updateRobotSpeedSlider() {
 			var r = document.getElementById("robot_speed").value / 100 * 255;
@@ -237,3 +237,7 @@ def = parseInt(def, 10) || 0;
 	</div>
 </body>
 </html>
+
+<script>
+	updateRobotSpeedSlider();
+</script>
