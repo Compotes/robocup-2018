@@ -168,12 +168,12 @@ int main(int argc, char* argv[]) {
 			ext_compass_reset.store(true);
 		}
 
-		if (get_gpio_status(DRIBBLER_READ_GPIO) == 0  && i_have_ball == 1 && i_have_ball_counter < I_HAVE_BALL_TOLLERANCE) {
+		if (get_gpio_status(DRIBBLER_READ_GPIO) == 0 && i_have_ball_counter < I_HAVE_BALL_TOLLERANCE) {
 			i_have_ball = true;
 			i_have_ball_counter++;
 		} else {
 			i_have_ball_counter = 0;
-			i_have_ball = !get_gpio_status(DRIBBLER_READ_GPIO);
+			i_have_ball = false;
 		}
 
         i_see_ball = ball_visible.load();
@@ -196,7 +196,7 @@ int main(int argc, char* argv[]) {
 
 		if ((FORWARD_ANGLE - bd) < 93 && (FORWARD_ANGLE - bd) > 87) {
 			if (ball_zone <= FIRST_ZONE_NUMBER) {
-				i_have_ball = i_have_ball == 1 ? 1 : 0;
+				i_have_ball = i_have_ball == 1 ? 0 : 1;
 			} else {
 				i_have_ball = 0;
 			}

@@ -3,5 +3,4 @@
 *.o
 ximeaJetsonGPU
 obr.jpg
-*_VALUES.*
 /tmp
