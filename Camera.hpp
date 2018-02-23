@@ -32,6 +32,13 @@ extern atomic<int> ball_y;
 extern atomic<bool> goal_visible;
 extern atomic<int> goal_x;
 extern atomic<int> goal_y;
+extern atomic<int> goal_height;
+
+extern atomic<bool> ext_livestream;
+
+extern atomic<bool> ext_attack_blue_goal;
+
+extern atomic<bool> ext_i_see_goal_to_kick;
 
 void update_camera();
 void init_camera();

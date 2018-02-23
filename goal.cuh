@@ -14,6 +14,13 @@
 #include "opencv2/cudaarithm.hpp"
 #include <iostream>
 
-__host__ int goal_detect(cv::cuda::GpuMat &src);
+struct object {
+	int x;
+	int y;
+	int width;
+	int height;
+};
+
+__host__ object goal_detect(cv::cuda::GpuMat &src, int min_width, int min_height, int max_pixel);
 
 #endif

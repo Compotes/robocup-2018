@@ -2,20 +2,6 @@
 <html>
 	<head>
 		<meta charset="UTF-8">
-		<!-- Latest compiled and minified CSS -->
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
-		integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
-		crossorigin="anonymous">
-
-		<!-- Optional theme -->
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
-		integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp"
-		crossorigin="anonymous">
-
-		<!-- Latest compiled and minified JavaScript -->
-		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
-		integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
-		crossorigin="anonymous"></script>
 	</head>
 	<script>
 		var go = false;
@@ -43,46 +29,31 @@
 			document.getElementById("Form").submit();
 		}
 
-		function updateSlider(id) {
-			if (document.getElementById(id).value > 0) {
-				document.getElementById(id).classList.add("slider-green");
-				document.getElementById(id).classList.remove("slider-red");
-				document.getElementById(id).classList.remove("slider-neutral");
-			} else if (document.getElementById(id).value == 0){
-				document.getElementById(id).classList.add("slider-neutral");
-				document.getElementById(id).classList.remove("slider-green");
-				document.getElementById(id).classList.remove("slider-red");
-			} else {
-				document.getElementById(id).classList.add("slider-red");
-				document.getElementById(id).classList.remove("slider-green");
-				document.getElementById(id).classList.remove("slider-neutral");
-			}
+
+		var source = new EventSource("//192.168.1.2:4000");
+			source.onmessage = function(event) {
+			document.getElementById("result").innerHTML = event.data + "<br>";
+		};
+		// When a connection is made
+		source.onopen = function() {
+			console.log('Opened connection ');
+		};
+
+		// A connection could not be made
+		source.onerror = function (event) {
+			console.log(event);
+		};
+
+		// A connection was closed
+		source.onclose = function(code, reason) {
+			console.log(code, reason);
 		}
 
-		function rgb(r,g,b, def) {
-			def = parseInt(def, 10) || 0;
-			return 'rgb(' + [(r||def),(g||def),(b||def)].join(',') + ')';
-		}
+		// Close the connection when the window is closed
+		window.addEventListener('beforeunload', function() {
+			source.close();
+		});
 
-		function updateRobotSpeedSlider() {
-			var r = document.getElementById("robot_speed").value / 100 * 255;
-			document.getElementById("robot_speed").style.backgroundColor = 'rgb(0,' + parseInt(r) +',0)';
-			console.log('rgb(' + parseInt(r) + ',0,0)');
-		}
-
-		function updateRobotSpeed() {
-			go = !go;
-
-			if (go) {
-				document.getElementById("robot_speed").classList.add("slider-green");
-				document.getElementById("robot_speed").classList.remove("slider-red");
-				document.getElementById("robot_speed").classList.remove("slider-neutral");
-			} else {
-				document.getElementById("robot_speed").classList.add("slider-neutral");
-				document.getElementById("robot_speed").classList.remove("slider-green");
-				document.getElementById("robot_speed").classList.remove("slider-red");
-			}
-		}
 	</script>
 
 <style>
@@ -93,7 +64,7 @@
 	}
 
 	table {
-		width: 90%;
+		width: 100%;
 		margin-left:2px;
 		color: black;
 	}
@@ -115,87 +86,231 @@
 	th {
 		padding: 2px;
 	}
-
-	.slidecontainer {
-		width: 100%;
+	form {
+		background: #3d3d4a;
 	}
+	p {
+		padding: 20px;
+		text-align: left;
+		color: #7a7a7a;
+		font: 2vmin trebuchet ms, arial, sans-serif;
+		font-size: 2.5em;
+		font-weight: 700;
 
-	.slider-default {
-		-webkit-appearance: none;
-		appearance: none;
-		width: 100%;
-		height: 25px;
-		outline: none;
-		opacity: 0.7;
-		-webkit-transition: .2s;
-		transition: opacity .2s;
 	}
+</style>
+<style>
+@keyframes float {
+  to {
+    transform: translateY(0.75rem);
+  }
+}
+.wrap:not(.full) output, .wrap.full output:before {
+  position: absolute;
+  width: 2.5em;
+  height: 2.5em;
+  opacity: 0;
+  color: #fff;
+  pointer-events: none;
+  transition: opacity 0.5s ease-in-out;
+}
+* {
+  margin: 0;
+}
+body {
+  background: #3d3d4a;
+}
+.wrap {
+  margin: 2em auto;
+  width: 25em;
+  font: 2vmin trebuchet ms, arial, sans-serif;
+  font-size: 10px;
+}
+.wrap:not(.full) {
+  position: relative;
+}
+.wrap:not(.full) output {
+  top: 0;
+  transform: translate(calc(var(--val)/100*22.5em));
+}
+.wrap.full {
+  position: relative;
+  height: 25em;
+}
+.wrap.full [type='range'] {
+  display: block;
+  transform-origin: 100% 0;
+  transform: rotate(-90deg) translatey(-100%);
+}
+.wrap.full output {
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  color: #7a7a7a;
+  font-size: 4em;
+  font-weight: 700;
+}
+.wrap.full output:before {
+  right: 0;
+  bottom: 0;//calc(var(--movzero)*22.5em*100/var(--range));
+  transform: translatey(calc(var(--mov)*-22.5em));//translatey(calc(var(--val)/var(--range)*-22.5em));
+  line-height: 2.5em;
+  text-align: center;
+  font-size: 0.25em;
+  font-weight: 200;
+  counter-reset: val var(--val);
+  content: counter(val) "%";
+}
+[type='range'] {
+  padding: 0;
+  width: 25em;
+  height: 2.5em;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+[type='range'], [type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+}
+[type='range']::-webkit-slider-runnable-track {
+  border: none;
+  width: 25em;
+  height: 0.5em;
+  border-radius: 0.25em;
+  background: #343440;
+}
+[type='range']::-webkit-slider-thumb {
+  margin-top: -1em;
+  border: none;
+  width: 2.5em;
+  height: 2.5em;
+  border-radius: 50%;
+  transform: scale(0.7);
+  background: #e6323e;
+  filter: saturate(0.7);
+  transition: transform 0.5s linear, filter 0.5s;
+}
+[type='range'] + output {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(#3d3d4a 39%, transparent 85%), conic-gradient(#4CE632  calc(var(--val)*1%), #7a7a7a 0 calc(var(--valn)*1%), #e6323e 0%);// conic-gradient(#e64c65 calc(-var(--val)*1%), #41a8ab 0%);
+}
+[type='range'] + output:after {
+  content: "%";
+}
+[type='range']:focus {
+  outline: none;
+}
+[type='range']:focus::-webkit-slider-thumb {
+  transform: none;
+  filter: none;
+}
+.wrap:not(.full) [type='range']:focus + output, .wrap.full [type='range']:focus + output:before {
+  opacity: 1;
+}
 
-	.slider-default:hover {
-		opacity: 1;
-	}
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 120px;
+  height: 68px;
+}
 
-	.slider-green::-webkit-slider-thumb {
-		background: #00FF00;
-	}
+/* Hide default HTML checkbox */
+.switch input {display:none;}
 
-	.slider-red::-webkit-slider-thumb {
-		background: #ff0000;
-	}
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 68px;
+  background-color: #e6323e;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
 
-	.slider-green::-moz-range-thumb {
-		background: #00FF00;
-	}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 52px;
+  width: 52px;
+  left: 8px;
+  bottom: 8px;
+  border-radius: 50%;
+  background-color: #7a7a7a;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
 
-	.slider-red::-moz-range-thumb {
-		background: #ff0000;
-	}
+input:checked + .slider {
+  background-color: #4CE632;
+}
 
-	.slider-default::-moz-range-thumb {
-		width: 25px;
-		height: 25px;
-		cursor: pointer;
-	}
+.slider#blue {
+	background-color: yellow;
+}
 
-	.slider-default::-webkit-slider-thumb {
-		-webkit-appearance: none;
-		appearance: none;
-		width: 25px;
-		height: 25px;
-		cursor: pointer;
-	}
+input:checked + .slider#blue {
+  background-color: blue;
+}
 
-	.slider-neutral::-webkit-slider-thumb {
-		background: #000000;
-	}
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
 
-	.slider-neutral::-moz-range-thumb {
-		background: #000000;
-	}
+input:checked + .slider:before {
+  -webkit-transform: translateX(52px);
+  -ms-transform: translateX(52px);
+  transform: translateX(52px);
+}
 </style>
 
 <body class="container">
+
+	<div id="result"></div>
 	<div class="jumbotron">
 		<table>
 		  <tr>
 			<th>
 				<form>
-				<p>robot speed:</p>
-				<p id="robot_speed_l">20</p>
-				<input id="robot_speed" type="range" class="slider-default slider-neutral"
-					   onchange="updateRobotSpeedSlider(); sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l');"
-					   oninput="updateRobotSpeedSlider(); sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l')"
-					   name="range_value" min="0" max="100" step="1" value="20">
+					<p>Robot speed:</p>
+					<div style="float: left;">
+					<label class="switch" style="top: 12em; left: 1em;">
+						<input type="checkbox" onclick="sendData('go', '1', 0)">
+						<span class="slider"></span>
+					</label>
+					</div>
+					<div class='wrap' style="float: left; left: 15em;">
+						<input id="robot_speed" type="range"
+							   onchange="sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l');"
+							   oninput="sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l')"
+							   name="range_value" min="0" max="100" step="1" value="20">
+					</div>
+					<div style="clear: left;"></div>
 				</form>
 			</th>
-			  <th>
+			 <th>
 				<form>
-				<p>dribbler speed:</p>
-				<p id="dribbler_speed_l">0</p>
-				<input id="dribbler_speed" type="range" class="slider-default slider-neutral"
-					   onchange="updateSlider('dribbler_speed'); sendData('dribbler_speed', document.getElementById('dribbler_speed').value,'dribbler_speed_l')"
-					   oninput="updateSlider('dribbler_speed'); sendData('dribbler_speed', document.getElementById('dribbler_speed').value,'dribbler_speed_l')"
-					   name="range_value" min="-100" max="100" step="1" value="0">
+					<p>Dribbler speed:</p>
+					<div style="float: left;">
+					<label class="switch" style="top: 12em; left: 1em;">
+						<input type="checkbox" onclick="sendData('go_dribbler', '1', 0)">
+						<span class="slider"></span>
+					</label>
+					</div>
+					<div class='wrap' style="float: left; left: 15em;">
+						<input id="dribbler_speed" type="range"
+							   onchange="sendData('dribbler_speed', document.getElementById('dribbler_speed').value,'dribbler_speed_l')"
+							   oninput="sendData('dribbler_speed', document.getElementById('dribbler_speed').value,'dribbler_speed_l')"
+							   name="range_value" min="-100" max="100" step="1" value="0">
+					</div>
+					<div style="clear: left;"></div>
 				</form>
 			  </th>
 		  </tr>
@@ -203,23 +318,28 @@
 	</div>
 	<div class="wrapper">
 		<div class="buttons">
+			<label class="switch" >
+				<input type="checkbox" id="goal_color" onclick="sendData('blue_goal', document.getElementById('goal_color').checked, 0)">
+				<span class="slider" id="blue"></span>
+			</label>
 			<table>
 			  <tr>
-				<button type="button" id="go"
-				onclick="updateRobotSpeed(); sendData('go', '1', 0)" name="go" value="1">GO</button>
-			  </tr>
-			  <tr>
-				<button type="button" id="go_dribbler"
-					onclick="sendData('go_dribbler', '1', 0)" name="go_dribbler" value="1">GO DRIBBLER</button>
-			  </tr>
 			  <tr>
 				<form>
-					<button type="submit" name="kick" value="1">KICK</button>
+					<button type="button" id="kick"
+					onclick="sendData('kick', '1', 0)" name="kick" value="1">KICK</button>
 				</form>
 			  </tr>
 			  <tr>
 				<form>
-					<button type="submit" name="set_compass_north" value="1">SET COMPASS</button>
+					<button type="button" id="set_compass_north"
+					onclick="sendData('set_compass_north', '1', 0)" name="set_compass_north" value="1">SET COMPASS</button>
+				</form>
+			  </tr>
+			  <tr>
+				<form>
+					<button type="button" id="live_stream"
+					onclick="sendData('live_stream', '1', 0)" name="live_stream" value="1">LIVE STREAM ON/OFF</button>
 				</form>
 			  </tr>
 			  <tr>
@@ -229,7 +349,8 @@
 			  </tr>
 			  <tr>
 				<form>
-					<button type="submit" name="calibrate" value="1">CALIBRATE LINES</button>
+					<button type="button" id="calibrate"
+					onclick="sendData('calibrate', '1', 0)" name="calibrate" value="1">CALIBRATE LINES</button>
 				</form>
 			  </tr>
 			</table>
@@ -237,7 +358,56 @@
 	</div>
 </body>
 </html>
-
 <script>
-	updateRobotSpeedSlider();
+var _RD = document.getElementById('dribbler_speed'),
+    _WD = _RD.parentNode,
+    _OD = document.createElement('output');
+var val = null,
+    conic = false;
+function update() {
+    var newval = +_RD.value;
+    if (val !== newval) {
+        _WD.style.setProperty('--val', _OD.value = val = newval);
+        _WD.style.setProperty('--valn', val+100);
+        _WD.style.setProperty('--mov', (val-_RD.min)/(_RD.max-_RD.min));
+        if (conic) _OD.setAttribute('aria-label', val + '%');
+    }
+};
+update();
+_OD.setAttribute('for', _RD.id);
+_WD.appendChild(_OD);
+if (getComputedStyle(_OD).backgroundImage !== 'none') {
+    conic = true;
+    _WD.classList.add('full');
+    _OD.setAttribute('role', 'img');
+    _OD.setAttribute('aria-label', val + '%');
+}
+addEventListener('input', update, false);
+addEventListener('change', update, false);
+</script><script>
+var _R = document.getElementById('robot_speed'),
+    _W = _R.parentNode,
+    _O = document.createElement('output');
+var val = null,
+    conic = false;
+function update() {
+    var newval = +_R.value;
+    if (val !== newval) {
+        _W.style.setProperty('--val', _O.value = val = newval);
+        _W.style.setProperty('--valn', val+100);
+        _W.style.setProperty('--mov', (val-_R.min)/(_R.max-_R.min));
+        if (conic) _O.setAttribute('aria-label', val + '%');
+    }
+};
+update();
+_O.setAttribute('for', _R.id);
+_W.appendChild(_O);
+if (getComputedStyle(_O).backgroundImage !== 'none') {
+    conic = true;
+    _W.classList.add('full');
+    _O.setAttribute('role', 'img');
+    _O.setAttribute('aria-label', val + '%');
+}
+addEventListener('input', update, false);
+addEventListener('change', update, false);
 </script>

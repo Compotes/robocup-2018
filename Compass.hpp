@@ -21,8 +21,10 @@ using namespace std;
 
 extern atomic<int> compass_degree;
 extern atomic<int> compass_zero;
+extern atomic<bool> ext_compass_reset;
 
 void update_compass();
 void init_compass();
+void compass_reset();
 
 #endif

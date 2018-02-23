@@ -26,8 +26,10 @@ GpuMat inGpu;
 GpuMat ballErodeMat, goalErodeMat;
 GpuMat ballDilateMat, goalDilateMat;
 
-GpuMat ballGpuMat(WIDTH, HEIGHT, CV_8UC1);;
-GpuMat goalGpuMat(WIDTH, HEIGHT, CV_8UC1);;
+GpuMat ballGpuMat(WIDTH, HEIGHT, CV_8UC1);
+GpuMat goalGpuMat(WIDTH, HEIGHT, CV_8UC1);
+
+Mat goalMarker, ballMarker, goalMat, ballMat;
 
 Mat mat;
 Mat dst;
@@ -43,6 +45,8 @@ Scalar ballContourColor = Scalar(0, 0, 255);
 Scalar goalContourColor = Scalar(0, 255, 255);
 Scalar centerContourColor = Scalar(255, 33, 0);
 
+const string BALL_FILE = "ball";
+
 vector<vector<Point>> ballContours, goalContours;
 vector<Vec4i> ballHierarchy, goalHierarchy;
 
@@ -55,13 +59,25 @@ atomic<int> ball_y;
 
 atomic<int> goal_x;
 atomic<int> goal_y;
+atomic<int> goal_height;
 atomic<bool> goal_visible;
+
+atomic<bool> ext_i_see_goal_to_kick;
+
+atomic<bool> ext_livestream;
+
+atomic<bool> ext_attack_blue_goal;
+bool attack_blue_goal;
 
 InRangeParam ballInRangeParam, goalInRangeParam;
 int hMin, sMin, vMin;
 int hMax, sMax, vMax;
 
 int showImage, showFpsCount, imageWindowsOn;
+
+//ofstream goal_values;
+//myfile.open ("goal_values.txt");
+//writing_counter = 0;
 
 Mat element;
 Ptr<cuda::Filter> erodeFilter;
@@ -70,7 +86,20 @@ int elementShape = MORPH_ELLIPSE;
 float filterArea;
 int dilateMultiplier;
 
+object goal, ball;
+
 #define CALIBRATION true
+
+#define MIN_GOAL_WIDTH 38
+#define MIN_GOAL_HEIGHT 22
+
+#define MIN_BALL_WIDTH 10
+#define MIN_BALL_HEIGHT 10
+
+#define GOAL_MAX_PIXEL 500
+#define BALL_MAX_PIXEL 772
+
+#define KICK_TOLERANCE 30
 
 struct timespec t0, t1;
 
@@ -86,6 +115,55 @@ byte *matToBytes(Mat image)
 
 Mat *uMat;
 
+void overlayImage(const cv::Mat &background, const cv::Mat &foreground,
+  cv::Mat &output, cv::Point2i location)
+{
+  background.copyTo(output);
+
+
+  // start at the row indicated by location, or at row 0 if location.y is negative.
+  for(int y = std::max(location.y , 0); y < background.rows; ++y)
+  {
+    int fY = y - location.y; // because of the translation
+
+    // we are done of we have processed all rows of the foreground image.
+    if(fY >= foreground.rows)
+      break;
+
+    // start at the column indicated by location,
+
+    // or at column 0 if location.x is negative.
+    for(int x = std::max(location.x, 0); x < background.cols; ++x)
+    {
+      int fX = x - location.x; // because of the translation.
+
+      // we are done with this row if the column is outside of the foreground image.
+      if(fX >= foreground.cols)
+        break;
+
+      // determine the opacity of the foregrond pixel, using its fourth (alpha) channel.
+      double opacity =
+        ((double)foreground.data[fY * foreground.step + fX * foreground.channels() + 3])
+
+        / 255.;
+
+
+      // and now combine the background and foreground pixel, using the opacity,
+
+      // but only if opacity > 0.
+      for(int c = 0; opacity > 0 && c < output.channels(); ++c)
+      {
+        unsigned char foregroundPx =
+          foreground.data[fY * foreground.step + fX * foreground.channels() + c];
+        unsigned char backgroundPx =
+          background.data[y * background.step + x * background.channels() + c];
+        output.data[y*output.step + output.channels()*x + c] =
+          backgroundPx * (1.-opacity) + foregroundPx * opacity;
+      }
+    }
+  }
+}
+
 void measureFps() {
     clock_gettime(CLOCK_REALTIME, &t1);
     uint64_t deltaTime = (t1.tv_sec - t0.tv_sec) * 1000000 + (t1.tv_nsec - t0.tv_nsec) / 1000 / 1000;
@@ -93,7 +171,7 @@ void measureFps() {
     if (deltaTime > 1000) {
         fps = counter;
         frame_rate.store(fps);
-        printf("FPS:%10d ", fps);
+        printf("\033[1;32;40mFPS:%d\033[0m\n", fps);
         cout << "DEGREE: " << compass_degree.load() << endl;
         counter = 0;
         t0 = t1;
@@ -153,14 +231,8 @@ void destroyImageWindows() {
 
 void save_values() {
     fstream camera_values;
-    camera_values.open("CAMERA_VALUES.ahmed", ios::out | ios::trunc);
-
-    camera_values << ballInRangeParam.minH << endl;
-    camera_values << ballInRangeParam.maxH << endl;
-    camera_values << ballInRangeParam.minS << endl;
-    camera_values << ballInRangeParam.maxS << endl;
-    camera_values << ballInRangeParam.minV << endl;
-    camera_values << ballInRangeParam.maxV << endl;
+    string color = attack_blue_goal ? "blue" : "yellow";
+    camera_values.open("CAMERA_VALUES." + color, ios::out | ios::trunc);
 
     camera_values << goalInRangeParam.minH << endl;
     camera_values << goalInRangeParam.maxH << endl;
@@ -174,10 +246,26 @@ void save_values() {
     cout << "DATA SAVED" << endl;
 }
 
-void load_values() {
-    string line;
+void save_ball_values() {
+	fstream camera_values;
+	camera_values.open("CAMERA_VALUES." + BALL_FILE, ios::out | ios::trunc);
+
+	camera_values << ballInRangeParam.minH << endl;
+    camera_values << ballInRangeParam.maxH << endl;
+    camera_values << ballInRangeParam.minS << endl;
+    camera_values << ballInRangeParam.maxS << endl;
+    camera_values << ballInRangeParam.minV << endl;
+    camera_values << ballInRangeParam.maxV << endl;
+
+    camera_values.close();
+
+    cout << "BALL SAVED" << endl;
+}
+
+void load_ball_values() {
+	string line;
     fstream camera_values;
-    camera_values.open("CAMERA_VALUES.ahmed", ios::in);
+	camera_values.open("CAMERA_VALUES." + BALL_FILE, ios::in);
 
     getline(camera_values, line); ballInRangeParam.minH = atoi(line.c_str());
     getline(camera_values, line); ballInRangeParam.maxH = atoi(line.c_str());
@@ -186,12 +274,25 @@ void load_values() {
     getline(camera_values, line); ballInRangeParam.minV = atoi(line.c_str());
     getline(camera_values, line); ballInRangeParam.maxV = atoi(line.c_str());
 
+    cout << "BALL LOADED" << endl;
+
+	camera_values.close();
+}
+
+void load_values() {
+    string line;
+    fstream camera_values;
+    string color = attack_blue_goal ? "blue" : "yellow";
+    camera_values.open("CAMERA_VALUES." + color, ios::in);
+
     getline(camera_values, line); goalInRangeParam.minH = atoi(line.c_str());
     getline(camera_values, line); goalInRangeParam.maxH = atoi(line.c_str());
     getline(camera_values, line); goalInRangeParam.minS = atoi(line.c_str());
     getline(camera_values, line); goalInRangeParam.maxS = atoi(line.c_str());
     getline(camera_values, line); goalInRangeParam.minV = atoi(line.c_str());
     getline(camera_values, line); goalInRangeParam.maxV = atoi(line.c_str());
+
+	cout << "DATA LOAD" << endl;
 
     camera_values.close();
 }
@@ -205,6 +306,7 @@ void save_values_callback(int event, int x, int y, int flags, void* userdata) {
 void load_values_callback(int event, int x, int y, int flags, void* userdata) {
     if (event == EVENT_LBUTTONDOWN) {
         load_values();
+        load_ball_values();
     }
 }
 
@@ -255,6 +357,7 @@ void init_camera() {
     //vMax = 255; createTrackbar("Vmax",        "gui", &vMax,  255, 0);
 
     load_values();
+    load_ball_values();
 
     createTrackbar("ball minH", "gui", &ballInRangeParam.minH, 255, 0);
     createTrackbar("ball maxH", "gui", &ballInRangeParam.maxH, 255, 0);
@@ -274,8 +377,11 @@ void init_camera() {
     goalInRangeParam.output = goalGpuMat;
 
     dilateMultiplier = 0; createTrackbar("dilate m", "gui", &dilateMultiplier,  900, update_filters);
-    showImage = 1; createTrackbar("show image", "gui", &showImage,  1, 0);
+    showImage = 0; createTrackbar("show image", "gui", &showImage,  1, 0);
     showFpsCount = 0; createTrackbar("show fps count", "gui", &showFpsCount,  100, 0);
+
+	goalMat = imread("jerry.png", -1);
+	ballMat = imread("supak.png", -1);
 
     thread camera_thread(update_camera);
     camera_thread.detach();
@@ -297,7 +403,7 @@ void write_to_livestream() {
 	}
 }
 
-string pipeline = "appsrc ! videoconvert ! videoscale ! video/x-raw,width=500 ! clockoverlay shaded-background=true font-desc=\"Sans 38\" ! x264enc tune=\"zerolatency\" threads=1 ! tcpserversink port=4444";
+string pipeline = "appsrc ! videoconvert ! videoscale ! video/x-raw,width=500 ! clockoverlay shaded-background=true font-desc=\"Sans 38\" ! x264enc tune=\"zerolatency\" threads=1 ! tcpserversink host=0.0.0.0 port=4444";
 VideoWriter writer(pipeline, 0, (double)25, cv::Size(1032, 772), false);
 
 void update_camera() {
@@ -310,19 +416,19 @@ void update_camera() {
 
     update_filters(0, NULL);
 
-    //int live_stream_frame_count = 0;
-
-	//thread live_stream_thread(write_to_livestream);
-	//live_stream_thread.detach();
-
     for (;;) {
+		if (ext_attack_blue_goal.load() != attack_blue_goal) {
+			attack_blue_goal = ext_attack_blue_goal.load();
+			load_values();
+		}
+
         mat = cam.GetNextImageOcvMat();
 
         inGpu.upload(mat);
         cv::cuda::demosaicing(inGpu, outGpu, FILTER);
 
         cv::cuda::cvtColor(outGpu, hsvGpu, COLOR_RGB2HSV);
-        //inRange_gpu(hsvGpu, hMin, sMin, vMin, hMax, sMax, vMax, thresholded);
+
         inRange_gpu(hsvGpu,
                 ballInRangeParam.minH, ballInRangeParam.minS, ballInRangeParam.minV,
                 ballInRangeParam.maxH, ballInRangeParam.maxS, ballInRangeParam.maxV,
@@ -334,7 +440,6 @@ void update_camera() {
                 goalInRangeParam.minH, goalInRangeParam.minS, goalInRangeParam.minV,
                 goalInRangeParam.maxH, goalInRangeParam.maxS, goalInRangeParam.maxV,
                 goalGpuMat);
-        //inRange_gpu_multi(hsvGpu, ballInRangeParam, goalInRangeParam);
 
         erodeFilter->apply(ballGpuMat, ballErodeMat);
         erodeFilter->apply(goalGpuMat, goalErodeMat);
@@ -342,135 +447,81 @@ void update_camera() {
         dilateFilter->apply(ballErodeMat, ballDilateMat);
         dilateFilter->apply(goalErodeMat, goalDilateMat);
 
-        ballDilateMat.download(ballDilated);
-        writer << ballDilated;
+        if (ext_livestream) {
+			ballDilateMat.download(ballDilated);
+			writer << ballDilated;
+		}
 
-        findContours(ballDilated, ballContours, ballHierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
-        int center_x = goal_detect(goalDilateMat);
-
-        //findContours(goalDilated, goalContours, goalHierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+        goal = goal_detect(goalDilateMat, MIN_GOAL_WIDTH, MIN_GOAL_HEIGHT, GOAL_MAX_PIXEL);
+		ball = goal_detect(ballDilateMat, MIN_BALL_WIDTH, MIN_BALL_HEIGHT, BALL_MAX_PIXEL);
 
         if (showImage)
             outGpu.download(resultMat); // DEBUG
 
-        //rectangle(resultMat, Point(0, 0), Point(WIDTH, INPUT_CROP_TOP), Scalar(255, 0, 0), 2, 8);
-
-        // Ball processing
-        bool ballVisible = false;
-        double ballAreaMax[2] = {-1, -1};
-        int ballContourIndex[2] = {-1, -1};
-        for(unsigned int i = 0; i < ballContours.size(); i++)
-        {
-            double area = contourArea(ballContours[i]);
-            if (area < 200.0) continue;
-            if (area > ballAreaMax[0]) {
-                ballContourIndex[1] = ballContourIndex[0];
-                ballContourIndex[0] = i;
-                ballAreaMax[1] = ballAreaMax[0];
-                ballAreaMax[0] = area;
-
-                ballVisible = true;
-            }
-        }
-
-        if (ballContourIndex[0] > -1) {
-            int cx = 0;
-            int cy = 0;
-
-            Moments m1 = moments(ballContours[ballContourIndex[0]]);
-            int cx1 = m1.m10 / m1.m00;
-            int cy1 = m1.m01 / m1.m00;
-
-            if (ballContourIndex[1] > -1) {
-                Moments m2 = moments(ballContours[ballContourIndex[1]]);
-                int cx2 = m2.m10 / m2.m00;
-                int cy2 = m2.m01 / m2.m00;
-
-				if (abs(cx1 - cx2) < MAX_GOAL_CENTERS_DISTANCE) {
-					cx = (cx1 + cx2) / 2;
-					cy = (cy1 + cy2) / 2;
-				} else {
-					cx = cx1;
-					cy = cy1;
-				}
-            } else {
-                cx = cx1;
-                cy = cy1;
-            }
-
-            if (showImage) {
-                drawContours(resultMat, ballContours, ballContourIndex[0], ballContourColor, 2, 8, ballHierarchy, 0, Point() );
-                drawContours(resultMat, ballContours, ballContourIndex[1], ballContourColor, 2, 8, ballHierarchy, 0, Point() );
-
-                circle(resultMat, Point(cx, cy), 5, centerContourColor, 3, 8);
-            }
-
-            ball_x.store(cx);
-            ball_y.store(cy);
-        }
-        ball_visible.store(ballVisible);
-
-        // Goal processing
-        /*bool goalVisible = false;
-        double goalAreaMax[2] = {-1, -1};
-        int goalContourIndex[2] = {-1, -1};
-        for(unsigned int i = 0; i < goalContours.size(); i++ )
-        {
-            double area = contourArea(goalContours[i]);
-            if (area < 150.0) continue;
-            if (area > goalAreaMax[0]) {
-                goalContourIndex[1] = goalContourIndex[0];
-                goalContourIndex[0] = i;
-                goalAreaMax[1] = goalAreaMax[0];
-                goalAreaMax[0] = area;
-
-                goalVisible = true;
-            }
-        }
-
-        if (goalContourIndex[0] > -1) {
-            int cx = 0;
-            int cy = 0;
-
-			int maxX = 0, minX = 1032;
-			for (unsigned int i = 0; i < goalContours[goalContourIndex[0]].size(); i++) {
-				if (goalContours[goalContourIndex[0]][i].x > maxX) maxX = goalContours[goalContourIndex[0]][i].x;
-				if (goalContours[goalContourIndex[0]][i].x < minX) minX = goalContours[goalContourIndex[0]][i].x;
-			}
-
-            if (goalContourIndex[1] > -1) {
-				int maxX2 = 0, minX2 = 1032;
-				for (unsigned int i = 0; i < goalContours[goalContourIndex[1]].size(); i++) {
-					if (goalContours[goalContourIndex[1]][i].x > maxX2) maxX2 = goalContours[goalContourIndex[1]][i].x;
-					if (goalContours[goalContourIndex[1]][i].x < minX2) minX2 = goalContours[goalContourIndex[1]][i].x;
-				}
-				cx = (min(minX, minX2) + max(maxX, maxX2))/2;
-				cy = 350;
-            } else {
-				cx = (maxX + minX)/2;
-				cy = 350;
-            }
-
-            if (showImage) {
-                drawContours(resultMat, goalContours, goalContourIndex[0], goalContourColor, 2, 8, goalHierarchy, 0, Point() );
-                drawContours(resultMat, goalContours, goalContourIndex[1], goalContourColor, 2, 8, goalHierarchy, 0, Point() );
-                circle(resultMat, Point(cx, cy), 5, centerContourColor, 3, 8);
-            }
-
-            goal_x.store(cx);
-            goal_y.store(cy);
-        }
-        goal_visible.store(goalVisible);*/
-
-        /*rectangle(resultMat, Point(792, 0), Point(822, 772), Scalar(0, 0, 255), 2, 8);
-		rectangle(resultMat, Point(0, 0), Point(1032, 500), Scalar(0, 0, 255), 2, 8);*/
-		rectangle(resultMat, Point(center_x, 0), Point(center_x, 772), Scalar(0, 0, 255), 2, 8);
-		if (center_x == -1) goal_visible.store(false);
+		if (goal.x == -1) goal_visible.store(false);
 		else goal_visible.store(true);
 
-		goal_x.store(center_x);
+		if (ball.x == -1) ball_visible.store(false);
+		else ball_visible.store(true);
+
+		if(goal.x != -1) {
+			if (ball.x > goal.x - goal.width / 2 + KICK_TOLERANCE && ball.x < goal.x + goal.width / 2 - KICK_TOLERANCE) {
+				ext_i_see_goal_to_kick = true;
+			} else {
+				ext_i_see_goal_to_kick = false;
+			}
+		} else {
+			ext_i_see_goal_to_kick = false;
+		}
+
+		ball_x.store(ball.x);
+		ball_y.store(ball.y);
+
+		goal_x.store(goal.x);
+		goal_y.store(goal.y);
+		goal_height.store(goal.height);
+
+		if (showImage) {
+			if (ext_i_see_goal_to_kick) {
+				putText(resultMat, "KICK", Point2f(10, 25), FONT_HERSHEY_PLAIN, 2, Scalar(0,0,255,255));
+			} else {
+				putText(resultMat, "NO KICK", Point2f(10, 25), FONT_HERSHEY_PLAIN, 2, Scalar(0,255,0,255));
+			}
+		}
+
+		if (showImage) {
+			if (goal.x != -1 && goal.height > 0) {
+				rectangle(resultMat, Point(0, goal.y), Point(1032, goal.y), Scalar(0, 0, 255), 2, 8);
+				rectangle(resultMat, Point(goal.x, 0), Point(goal.x, 772), Scalar(0, 0, 255), 2, 8);
+
+				rectangle(resultMat, Point(goal.x - goal.width / 2 + KICK_TOLERANCE, 0),
+						  Point(goal.x - goal.width / 2 + KICK_TOLERANCE, 772),
+						  Scalar(0, 255, 0), 2, 8);
+
+				rectangle(resultMat, Point(goal.x + goal.width / 2 - KICK_TOLERANCE, 0),
+						  Point(goal.x + goal.width / 2 - KICK_TOLERANCE, 772),
+						  Scalar(0, 255, 0), 2, 8);
+
+				resize(goalMat,goalMarker,Size(goal.height*100/86,goal.height));
+				overlayImage(resultMat, goalMarker, resultMat, cv::Point(goal.x - goal.height*100/86/2, goal.y - goal.height/2));
+				//goalMarker.copyTo(resultMat(cv::Rect(goal.x - goalMarker.rows/2, goal.y - goalMarker.cols/2,
+				//						goalMarker.cols, goalMarker.rows)));
+			}
+
+			if (ball.x != -1 && ball.width > 0 && ball.height > 0) {
+				rectangle(resultMat, Point(0, ball.y), Point(1032, ball.y), Scalar(255, 0, 0), 2, 8);
+				rectangle(resultMat, Point(ball.x, 0), Point(ball.x, 772), Scalar(255, 0, 0), 2, 8);
+				resize(ballMat,ballMarker,Size(ball.width,ball.height));
+				overlayImage(resultMat, ballMarker, resultMat, cv::Point(ball.x - ball.width/2, ball.y - ball.height/2));
+				//ballMarker.copyTo(resultMat(cv::Rect(ball.x - ballMarker.rows/2, ball.y - ballMarker.cols/2,
+				//						ballMarker.cols, ballMarker.rows)));
+			}
+
+			  //cout << "Goal height: " << goal.height << " goal width: " << goal.width << "\n";
+		}
 
 		if(CALIBRATION && showImage) {
+			outGpu.download(mat);
 			goalDilateMat.download(goalDilated);
 			createImageWindows();
 			debugImage(&goalDilated);

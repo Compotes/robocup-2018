@@ -116,7 +116,7 @@ void serialMeasureFps() {
     serialCounter++;
     if (deltaTime > 1000) {
         serialFps = serialCounter;
-        printf(" SERIAL FPS:%10d ", serialFps);
+        printf("SERIAL FPS:%10d ", serialFps);
         serialCounter = 0;
         serialT0 = serialT1;
     }
@@ -129,6 +129,10 @@ void write_protocol() {
 		int speed = ext_speed.load();
 		int dribbler_speed = ext_dribbler_speed.load() + 100;
 		int azimuth = ext_azimuth.load();
+
+		if (azimuth > 80/*100*/) azimuth = 80;//100;
+		if (azimuth < -80/*100*/) azimuth = -80;//100;
+
 		if (degree >= 180) {
 			degree -= 180;
 			speed = -speed;
@@ -205,7 +209,13 @@ void write_protocol() {
 				cout << lines_values_from_file[i] << endl;
 				sdPut(lines_values_from_file[i]);
 			}
-
+			if(start){
+				sdPut(START_STOP_COMMAND);
+			}
+			if(dribbler_start){
+				sdPut(DRIBBLER_START_COMMAND);
+				sdPut(dribbler_speed);
+			}
 			ext_send_calibration_data.store(false);
 		}
 		serialMeasureFps();
