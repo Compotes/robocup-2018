@@ -39,6 +39,8 @@ int init_serial() {
 	ext_kick.store(0);
 	ext_send_calibration_data.store(0);
 
+	load_lines_values_from_file();
+	ext_send_calibration_data.store(true);
 
     thread serial_write_thread(write_protocol);
     serial_write_thread.detach();

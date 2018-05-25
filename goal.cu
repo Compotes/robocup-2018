@@ -3,9 +3,13 @@
 using namespace std;
 
 struct segment {
-	long long start_pointer;
+	int start_pointer;
 	int size;
 } maximum_column, actual_segment_column, maximum_row, actual_segment_row;
+
+//int max_width(int y){
+//	return y*0.5033116626-7.0541699873+BALL_TOLERANCE;
+//}
 
 __global__ void goal_kernel(const cv::cuda::PtrStepSz<uchar1> src, int* d_columns, int* d_rows) {
 	if(src(threadIdx.x, blockIdx.x).x == 255){
@@ -77,6 +81,10 @@ __host__ object goal_detect(cv::cuda::GpuMat &src, int min_width, int min_height
 	if(actual_segment_row.size > maximum_row.size) {
 		maximum_row = actual_segment_row;
 	}
+
+	//if (max_width(maximum_row.start_pointer + maximum_row.size/2) < maximum_column.size) {
+	//	return {-1,-1,-1,-1};
+	//}
 
 	if(maximum_column.size > min_width) {
 		return {maximum_column.start_pointer + maximum_column.size/2, maximum_row.start_pointer + maximum_row.size/2, maximum_column.size, maximum_row.size};

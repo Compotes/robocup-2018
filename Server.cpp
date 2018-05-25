@@ -7,6 +7,7 @@ int A[20];
 string html = "";
 bool go = false;
 
+
 atomic<int> robot_speed;
 map<string, string> arguments;
 map<string, string> json_data;
@@ -14,7 +15,7 @@ string url;
 
 void load_html_for_server() {
 	fstream html_file;
-	html_file.open("server.html", ios::in);
+	html_file.open("/root/robocup-2018/server.html", ios::in);
 
 	string line;
 	html = "";
@@ -23,6 +24,18 @@ void load_html_for_server() {
 	}
 
 	cout << "HTML LOADED" << endl;
+}
+
+string load_png(const string name) {
+	string ret;
+	fstream png;
+	png.open(name, ios::in);
+
+	string line;
+	while(getline(png, line)) {
+		ret += line;
+	}
+	return ret;
 }
 
 void web(int fd) {
@@ -186,16 +199,27 @@ void web(int fd) {
 		sprintf(bufer, "%s", display_robot_speed.c_str());
 		write(fd,buffer,strlen(buffer));
 		write(fd, bufer, strlen(display_robot_speed.c_str()));
-	} else if(!strncmp(buffer, "GET /strm",9) || !strncmp(buffer,"get /strm",9)) {
-		while(true) {
-			sprintf(bufer,"retry: 100\ndata: %d %d\n\n", frame_rate.load(), ext_azimuth.load());
-			sprintf(buffer,"HTTP/1.1 200 OK\nServer: nweb/%d.0\nContent-Length: %ld\ncache-control: no-cache, public\nAccess-Control-Allow-Origin: *\nConnection: keep-alive\nContent-Type: text/event-stream\n\n", VERSION, strlen(bufer)); /* Header + a blank line */
-			write(fd,buffer,strlen(buffer));
-			write(fd,bufer,strlen(bufer));
-			this_thread::sleep_for(chrono::milliseconds(100));
+	} else if(strstr(buffer, "GET /robot_status")) {
+		int width = goal_width.load()*CAM_FOV / CAM_W;
+		int goal_degree = (goal_x.load() - CAM_W/2)*CAM_FOV / CAM_W;
+		goal_degree -= width/2;
+		width = width*10/36;
+		string goal_color = "yellow";
+		if(ext_attack_blue_goal.load()){
+			goal_color = "blue";
 		}
-    } else {
-		sprintf(buffer,"HTTP/1.1 200 OK\nServer: nweb/%d.0\nContent-Length: %ld\nAccess-Control-Allow-Origin: *\nConnection: close\nContent-Type: html\n\n", VERSION+3, strlen(html.c_str())); /* Header + a blank line */
+		int azimuth = compass_degree.load();
+		int level = 6-ext_ball_zone.load();
+		int ball_degree = (ball_x.load() - CAM_W/2)*CAM_FOV / CAM_W;
+		if(ball_degree == -51){
+			level = -500;
+		}
+		sprintf(bufer,"--width:%d; --goal_degree:%d; --goal_color: %s; --azimuth: %d; --level:%d; --ball_degree:%d", width, goal_degree, goal_color.c_str(), azimuth, level, ball_degree);
+        sprintf(buffer,"HTTP/1.1 200 OK\nServer: nweb/%d.0\nContent-Length: %ld\nAccess-Control-Allow-Origin: *\nConnection: close\nContent-Type: html\n\n", VERSION, strlen(bufer)); /* Header + a blank line */
+		write(fd,buffer,strlen(buffer));
+		write(fd,bufer,strlen(bufer));
+	} else {
+		sprintf(buffer,"HTTP/1.1 200 OK\nServer: nweb/%d.0\nContent-Length: %ld\nAccess-Control-Allow-Origin: *\nConnection: close\nContent-Type: html\n\n", VERSION, strlen(html.c_str())); /* Header + a blank line */
 		write(fd,buffer,strlen(buffer));
 		write(fd,html.c_str(),strlen(html.c_str()));
 	}
@@ -282,8 +306,8 @@ void init_server() {
 
 	this_thread::sleep_for(chrono::milliseconds(100));
 
-	thread server2(start_stream);
-	server2.detach();
+	/*thread server2(start_stream);
+	server2.detach();*/
 }
 
 /*

@@ -53,7 +53,6 @@
 		window.addEventListener('beforeunload', function() {
 			source.close();
 		});
-
 	</script>
 
 <style>
@@ -269,6 +268,36 @@ input:checked + .slider:before {
   -ms-transform: translateX(52px);
   transform: translateX(52px);
 }
+
+.robot {
+	width: 300px;
+	height: 300px;
+	margin: auto;
+	border-radius: 50%;
+	background: radial-gradient(#936900 10%, #3d3d4a 0 20%, #7a7a7a 0 20.5%, #3d3d4a 0 30%, #7a7a7a 0 30.5%, #3d3d4a 0 40%, #7a7a7a 0 40.5%, #3d3d4a 0 50%, #7a7a7a 0 50.5%, #3d3d4a 0  60%,  #7a7a7a 0 60.5% , transparent 0 70%, #7a7a7a 0 70.5%, #3d3d4a 0 80%),
+	conic-gradient(var(--goal_color) calc(var(--width)*1%), transparent 0 100%);
+	transform: rotate(calc(var(--azimuth)*1deg)) rotate(calc(var(--goal_degree)*1deg));
+}
+
+.ball {
+	margin: auto;
+	width: 23px;
+	height: 23px;
+	border-radius: 50%;
+	background: #ff7500;
+	transform-origin: center 120px;
+	transform: rotate(calc(var(--goal_degree)*-1deg)) rotate(calc(var(--ball_degree)*1deg)) translateY(-30px) translateY(calc((127*var(--level)/6)*1px));
+}
+.front_hole {
+	margin: auto;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	background: #3d3d4a;
+	transform-origin: center 150px;
+	transform: rotate(calc(var(--goal_degree)*-1deg)) translatey(110px);
+}
+
 </style>
 
 <body class="container">
@@ -290,7 +319,7 @@ input:checked + .slider:before {
 						<input id="robot_speed" type="range"
 							   onchange="sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l');"
 							   oninput="sendData('robot_speed', document.getElementById('robot_speed').value,'robot_speed_l')"
-							   name="range_value" min="0" max="100" step="1" value="20">
+							   name="range_value" min="0" max="100" step="1" value="60">
 					</div>
 					<div style="clear: left;"></div>
 				</form>
@@ -338,12 +367,6 @@ input:checked + .slider:before {
 			  </tr>
 			  <tr>
 				<form>
-					<button type="button" id="live_stream"
-					onclick="sendData('live_stream', '1', 0)" name="live_stream" value="1">LIVE STREAM ON/OFF</button>
-				</form>
-			  </tr>
-			  <tr>
-				<form>
 					<button type="submit" name="reload_server" value="1">RELOAD HTML</button>
 				</form>
 			  </tr>
@@ -354,6 +377,12 @@ input:checked + .slider:before {
 				</form>
 			  </tr>
 			</table>
+		</div>
+	</div>
+	<div class='robot' id='robot' style='--width:15; --goal_degree:20; --goal_color:yellow; --azimuth: 10; --level:0; --ball_degree:90'>
+		<div class='front_hole'>
+		</div>
+		<div class='ball'>
 		</div>
 	</div>
 </body>
@@ -410,4 +439,19 @@ if (getComputedStyle(_O).backgroundImage !== 'none') {
 }
 addEventListener('input', update, false);
 addEventListener('change', update, false);
+
+		window.onload = setInterval(function load_robot_status() {
+			var xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function() {
+				if (this.readyState == 4 && this.status == 200) {
+					document.getElementById("robot").style.cssText = this.responseText;
+				}
+			};
+			xhttp.open("GET", "/robot_status", true);
+			xhttp.send();
+		}, 50);
+</script>
+
+<script>
+	sendData('robot_speed', document.getElementById('robot_speed').value, 'robot_speed_l');
 </script>

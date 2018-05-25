@@ -23,11 +23,14 @@ GpuMat thresch[3];
 GpuMat threscl[3];
 GpuMat thresc[3];
 GpuMat inGpu;
-GpuMat ballErodeMat, goalErodeMat;
-GpuMat ballDilateMat, goalDilateMat;
+GpuMat ballErodeMat, goalErodeMat, greenErodeMat;
+GpuMat ballDilateMat, goalDilateMat, greenDilateMat;
 
 GpuMat ballGpuMat(WIDTH, HEIGHT, CV_8UC1);
 GpuMat goalGpuMat(WIDTH, HEIGHT, CV_8UC1);
+GpuMat greenGpuMat(WIDTH, HEIGHT, CV_8UC1);
+
+Mat debugMerge(WIDTH, HEIGHT, CV_8UC3);
 
 Mat goalMarker, ballMarker, goalMat, ballMat;
 
@@ -39,6 +42,7 @@ Mat inputMat;
 Mat resultMat;
 Mat ballDilated;
 Mat goalDilated;
+Mat greenDilated;
 
 // BGR
 Scalar ballContourColor = Scalar(0, 0, 255);
@@ -46,6 +50,7 @@ Scalar goalContourColor = Scalar(0, 255, 255);
 Scalar centerContourColor = Scalar(255, 33, 0);
 
 const string BALL_FILE = "ball";
+const string GREEN_FILE = "green";
 
 vector<vector<Point>> ballContours, goalContours;
 vector<Vec4i> ballHierarchy, goalHierarchy;
@@ -56,10 +61,12 @@ atomic<int> live_stream;
 atomic<bool> ball_visible;
 atomic<int> ball_x;
 atomic<int> ball_y;
+atomic<int> ext_ball_zone;
 
 atomic<int> goal_x;
 atomic<int> goal_y;
 atomic<int> goal_height;
+atomic<int> goal_width;
 atomic<bool> goal_visible;
 
 atomic<bool> ext_i_see_goal_to_kick;
@@ -69,7 +76,7 @@ atomic<bool> ext_livestream;
 atomic<bool> ext_attack_blue_goal;
 bool attack_blue_goal;
 
-InRangeParam ballInRangeParam, goalInRangeParam;
+InRangeParam ballInRangeParam, goalInRangeParam, greenInRangeParam;
 int hMin, sMin, vMin;
 int hMax, sMax, vMax;
 
@@ -91,7 +98,7 @@ object goal, ball;
 #define CALIBRATION true
 
 #define MIN_GOAL_WIDTH 38
-#define MIN_GOAL_HEIGHT 22
+#define MIN_GOAL_HEIGHT 12
 
 #define MIN_BALL_WIDTH 10
 #define MIN_BALL_HEIGHT 10
@@ -105,8 +112,31 @@ struct timespec t0, t1;
 
 xiAPIplusCameraOcv cam;
 
-byte *matToBytes(Mat image)
-{
+int ball_close(int x, int y) {
+	//first zone
+	float res = 0.0006484349*x*x-0.648445*x+499.613981 - FIRST_ZONE_TOLERANCE;
+	if (res < y) return FIRST_ZONE_NUMBER;
+
+	//second zone
+	res = 0.0005064493*x*x-0.5180190126*x+351.566136 - SECOND_ZONE_TOLERANCE;
+	if (res < y) return SECOND_ZONE_NUMBER;
+
+	//third zone
+	res = 0.0003762345*x*x-0.3793232269*x+268.615192 - THIRD_ZONE_TOLERANCE;
+	if (res < y) return THIRD_ZONE_NUMBER;
+
+	// fourth zone
+	res = 0.0003288547*x*x-0.3320353119*x+227.712064 - FOURTH_ZONE_TOLERANCE;
+	if (res < y) return FOURTH_ZONE_NUMBER;
+
+	// fifth zone
+	res = 0.0003011454*x*x-0.3028442648*x+201.358953 - FIFTH_ZONE_TOLERANCE;
+	if (res < y) return FIFTH_ZONE_NUMBER;
+
+	return BLYAT_ZONE_NUMBER;
+}
+
+byte *matToBytes(Mat image) {
     int size = image.total() * image.elemSize();
     byte *bytes = new byte[size];
     std::memcpy(bytes,image.data,size * sizeof(byte));
@@ -115,9 +145,7 @@ byte *matToBytes(Mat image)
 
 Mat *uMat;
 
-void overlayImage(const cv::Mat &background, const cv::Mat &foreground,
-  cv::Mat &output, cv::Point2i location)
-{
+void overlayImage(const cv::Mat &background, const cv::Mat &foreground, cv::Mat &output, cv::Point2i location) {
   background.copyTo(output);
 
 
@@ -232,7 +260,7 @@ void destroyImageWindows() {
 void save_values() {
     fstream camera_values;
     string color = attack_blue_goal ? "blue" : "yellow";
-    camera_values.open("CAMERA_VALUES." + color, ios::out | ios::trunc);
+    camera_values.open("/root/robocup-2018/CAMERA_VALUES." + color, ios::out | ios::trunc);
 
     camera_values << goalInRangeParam.minH << endl;
     camera_values << goalInRangeParam.maxH << endl;
@@ -248,7 +276,7 @@ void save_values() {
 
 void save_ball_values() {
 	fstream camera_values;
-	camera_values.open("CAMERA_VALUES." + BALL_FILE, ios::out | ios::trunc);
+	camera_values.open("/root/robocup-2018/CAMERA_VALUES." + BALL_FILE, ios::out | ios::trunc);
 
 	camera_values << ballInRangeParam.minH << endl;
     camera_values << ballInRangeParam.maxH << endl;
@@ -262,10 +290,26 @@ void save_ball_values() {
     cout << "BALL SAVED" << endl;
 }
 
+void save_green_values() {
+	fstream camera_values;
+	camera_values.open("/root/robocup-2018/CAMERA_VALUES." + GREEN_FILE, ios::out | ios::trunc);
+
+	camera_values << greenInRangeParam.minH << endl;
+    camera_values << greenInRangeParam.maxH << endl;
+    camera_values << greenInRangeParam.minS << endl;
+    camera_values << greenInRangeParam.maxS << endl;
+    camera_values << greenInRangeParam.minV << endl;
+    camera_values << greenInRangeParam.maxV << endl;
+
+    camera_values.close();
+
+    cout << "GREEN SAVED" << endl;
+}
+
 void load_ball_values() {
 	string line;
     fstream camera_values;
-	camera_values.open("CAMERA_VALUES." + BALL_FILE, ios::in);
+	camera_values.open("/root/robocup-2018/CAMERA_VALUES." + BALL_FILE, ios::in);
 
     getline(camera_values, line); ballInRangeParam.minH = atoi(line.c_str());
     getline(camera_values, line); ballInRangeParam.maxH = atoi(line.c_str());
@@ -279,11 +323,30 @@ void load_ball_values() {
 	camera_values.close();
 }
 
+void load_green_values() {
+	string line;
+    fstream camera_values;
+	camera_values.open("/root/robocup-2018/CAMERA_VALUES." + GREEN_FILE, ios::in);
+
+    getline(camera_values, line); greenInRangeParam.minH = atoi(line.c_str());
+    getline(camera_values, line); greenInRangeParam.maxH = atoi(line.c_str());
+    getline(camera_values, line); greenInRangeParam.minS = atoi(line.c_str());
+    getline(camera_values, line); greenInRangeParam.maxS = atoi(line.c_str());
+    getline(camera_values, line); greenInRangeParam.minV = atoi(line.c_str());
+    getline(camera_values, line); greenInRangeParam.maxV = atoi(line.c_str());
+
+    cout << "GREEN LOADED" << endl;
+
+	camera_values.close();
+}
+
+bool goal_load_setter = false;
+
 void load_values() {
     string line;
     fstream camera_values;
     string color = attack_blue_goal ? "blue" : "yellow";
-    camera_values.open("CAMERA_VALUES." + color, ios::in);
+    camera_values.open("/root/robocup-2018/CAMERA_VALUES." + color, ios::in);
 
     getline(camera_values, line); goalInRangeParam.minH = atoi(line.c_str());
     getline(camera_values, line); goalInRangeParam.maxH = atoi(line.c_str());
@@ -291,6 +354,18 @@ void load_values() {
     getline(camera_values, line); goalInRangeParam.maxS = atoi(line.c_str());
     getline(camera_values, line); goalInRangeParam.minV = atoi(line.c_str());
     getline(camera_values, line); goalInRangeParam.maxV = atoi(line.c_str());
+
+
+	if (goal_load_setter) {
+		setTrackbarPos("goal minH", "gui2", goalInRangeParam.minH);
+		setTrackbarPos("goal minS", "gui2", goalInRangeParam.minS);
+		setTrackbarPos("goal minV", "gui2", goalInRangeParam.minV);
+		setTrackbarPos("goal maxH", "gui2", goalInRangeParam.maxH);
+		setTrackbarPos("goal maxS", "gui2", goalInRangeParam.maxS);
+		setTrackbarPos("goal maxV", "gui2", goalInRangeParam.maxV);
+	}
+
+	goal_load_setter = true;
 
 	cout << "DATA LOAD" << endl;
 
@@ -300,6 +375,8 @@ void load_values() {
 void save_values_callback(int event, int x, int y, int flags, void* userdata) {
     if (event == EVENT_LBUTTONDOWN) {
         save_values();
+        save_ball_values();
+        save_green_values();
     }
 }
 
@@ -307,6 +384,7 @@ void load_values_callback(int event, int x, int y, int flags, void* userdata) {
     if (event == EVENT_LBUTTONDOWN) {
         load_values();
         load_ball_values();
+        load_green_values();
     }
 }
 
@@ -314,15 +392,24 @@ void init_camera() {
     createImageWindows();
 
     namedWindow("gui", WINDOW_NORMAL);
-
+    namedWindow("gui1", WINDOW_NORMAL);
+    namedWindow("gui2", WINDOW_NORMAL);
+    namedWindow("gui3", WINDOW_NORMAL);
     namedWindow("save", WINDOW_NORMAL);
     namedWindow("load", WINDOW_NORMAL);
 
     resizeWindow("gui", 200, 800);
+    resizeWindow("gui1", 200, 800);
+    resizeWindow("gui1", 200, 800);
+    resizeWindow("gui2", 200, 800);
+    resizeWindow("gui3", 200, 800);
     resizeWindow("save", 100, 100);
     resizeWindow("load", 100, 100);
 
-    moveWindow("gui", 1450, 0);
+    moveWindow("gui",   850, 0);
+    moveWindow("gui1", 1050, 0);
+    moveWindow("gui2", 1250, 0);
+    moveWindow("gui3", 1450, 0);
     moveWindow("save", 1100, 500);
     moveWindow("load", 1100, 700);
 
@@ -337,6 +424,7 @@ void init_camera() {
     cam.SetDownsampling(cam.GetDownsampling_Maximum());
     cam.SetImageDataFormat(XI_RAW8);
     cam.SetNextImageTimeout_ms(CAMERA_TIMEOUT);
+    //cam.SetGain(12.0f);
 
     printf("Starting acquisition...\n");
     cam.StartAcquisition();
@@ -358,30 +446,40 @@ void init_camera() {
 
     load_values();
     load_ball_values();
+    load_green_values();
 
-    createTrackbar("ball minH", "gui", &ballInRangeParam.minH, 255, 0);
-    createTrackbar("ball maxH", "gui", &ballInRangeParam.maxH, 255, 0);
-    createTrackbar("ball minS", "gui", &ballInRangeParam.minS, 255, 0);
-    createTrackbar("ball maxS", "gui", &ballInRangeParam.maxS, 255, 0);
-    createTrackbar("ball minV", "gui", &ballInRangeParam.minV, 255, 0);
-    createTrackbar("ball maxV", "gui", &ballInRangeParam.maxV, 255, 0);
+    createTrackbar("ball minH", "gui1", &ballInRangeParam.minH, 255, 0);
+    createTrackbar("ball maxH", "gui1", &ballInRangeParam.maxH, 255, 0);
+    createTrackbar("ball minS", "gui1", &ballInRangeParam.minS, 255, 0);
+    createTrackbar("ball maxS", "gui1", &ballInRangeParam.maxS, 255, 0);
+    createTrackbar("ball minV", "gui1", &ballInRangeParam.minV, 255, 0);
+    createTrackbar("ball maxV", "gui1", &ballInRangeParam.maxV, 255, 0);
     ballInRangeParam.output = ballGpuMat;
 
-    createTrackbar("goal minH", "gui", &goalInRangeParam.minH, 255, 0);
-    createTrackbar("goal maxH", "gui", &goalInRangeParam.maxH, 255, 0);
-    createTrackbar("goal minS", "gui", &goalInRangeParam.minS, 255, 0);
-    createTrackbar("goal maxS", "gui", &goalInRangeParam.maxS, 255, 0);
-    createTrackbar("goal minV", "gui", &goalInRangeParam.minV, 255, 0);
-    createTrackbar("goal maxV", "gui", &goalInRangeParam.maxV, 255, 0);
+    createTrackbar("goal minH", "gui2", &goalInRangeParam.minH, 255, 0);
+    createTrackbar("goal maxH", "gui2", &goalInRangeParam.maxH, 255, 0);
+    createTrackbar("goal minS", "gui2", &goalInRangeParam.minS, 255, 0);
+    createTrackbar("goal maxS", "gui2", &goalInRangeParam.maxS, 255, 0);
+    createTrackbar("goal minV", "gui2", &goalInRangeParam.minV, 255, 0);
+    createTrackbar("goal maxV", "gui2", &goalInRangeParam.maxV, 255, 0);
 
     goalInRangeParam.output = goalGpuMat;
+
+    createTrackbar("green minH", "gui3", &greenInRangeParam.minH, 255, 0);
+    createTrackbar("green maxH", "gui3", &greenInRangeParam.maxH, 255, 0);
+    createTrackbar("green minS", "gui3", &greenInRangeParam.minS, 255, 0);
+    createTrackbar("green maxS", "gui3", &greenInRangeParam.maxS, 255, 0);
+    createTrackbar("green minV", "gui3", &greenInRangeParam.minV, 255, 0);
+    createTrackbar("green maxV", "gui3", &greenInRangeParam.maxV, 255, 0);
+
+    greenInRangeParam.output = greenGpuMat;
 
     dilateMultiplier = 0; createTrackbar("dilate m", "gui", &dilateMultiplier,  900, update_filters);
     showImage = 0; createTrackbar("show image", "gui", &showImage,  1, 0);
     showFpsCount = 0; createTrackbar("show fps count", "gui", &showFpsCount,  100, 0);
 
-	goalMat = imread("jerry.png", -1);
-	ballMat = imread("supak.png", -1);
+	goalMat = imread("/root/robocup-2018/jerry.png", -1);
+	ballMat = imread("/root/robocup-2018/supak.png", -1);
 
     thread camera_thread(update_camera);
     camera_thread.detach();
@@ -406,6 +504,42 @@ void write_to_livestream() {
 string pipeline = "appsrc ! videoconvert ! videoscale ! video/x-raw,width=500 ! clockoverlay shaded-background=true font-desc=\"Sans 38\" ! x264enc tune=\"zerolatency\" threads=1 ! tcpserversink host=0.0.0.0 port=4444";
 VideoWriter writer(pipeline, 0, (double)25, cv::Size(1032, 772), false);
 
+int calib_count = 1;
+
+void distance_calibration(int count) {
+	fstream calibration_data;
+	int measuremets[772];
+	int measuredCount[772];
+
+	calibration_data.open("/root/robocup-2018/BALL_CALIB." + to_string(count), ios::out);
+	cout << "calibration STARTS in" << endl;
+	for (int i = 5; i > 0; i--) {
+		cout << i << endl;
+		usleep(1000*1000);
+	}
+
+	for(int i = 0; i < 15*100; i++) {
+		if (ball.x != -1) {
+			measuredCount[ball.y]++;
+			measuremets[ball.y] += ball.width;
+		}
+		cout << i << endl;
+		usleep(1000*10);
+	}
+
+	for (int i = 0; i < 772; i++) {
+		if (measuremets[i] != 0)
+			calibration_data << i << " " << measuremets[i] / measuredCount[i] << endl;
+	}
+	calib_count++;
+	calibration_data.close();
+}
+
+void start_distance_calibration_thread() {
+	thread calib(distance_calibration, calib_count);
+	calib.detach();
+}
+
 void update_camera() {
     counter = 0;
     clock_gettime(CLOCK_REALTIME, &t0);
@@ -415,6 +549,8 @@ void update_camera() {
     GpuMat toInv;
 
     update_filters(0, NULL);
+
+    //start_distance_calibration_thread();
 
     for (;;) {
 		if (ext_attack_blue_goal.load() != attack_blue_goal) {
@@ -441,11 +577,18 @@ void update_camera() {
                 goalInRangeParam.maxH, goalInRangeParam.maxS, goalInRangeParam.maxV,
                 goalGpuMat);
 
+        inRange_gpu(hsvGpu,
+                greenInRangeParam.minH, greenInRangeParam.minS, greenInRangeParam.minV,
+                greenInRangeParam.maxH, greenInRangeParam.maxS, greenInRangeParam.maxV,
+                greenGpuMat);
+
         erodeFilter->apply(ballGpuMat, ballErodeMat);
         erodeFilter->apply(goalGpuMat, goalErodeMat);
+        erodeFilter->apply(greenGpuMat, greenErodeMat);
 
         dilateFilter->apply(ballErodeMat, ballDilateMat);
         dilateFilter->apply(goalErodeMat, goalDilateMat);
+        dilateFilter->apply(greenErodeMat, greenDilateMat);
 
         if (ext_livestream) {
 			ballDilateMat.download(ballDilated);
@@ -453,7 +596,8 @@ void update_camera() {
 		}
 
         goal = goal_detect(goalDilateMat, MIN_GOAL_WIDTH, MIN_GOAL_HEIGHT, GOAL_MAX_PIXEL);
-		ball = goal_detect(ballDilateMat, MIN_BALL_WIDTH, MIN_BALL_HEIGHT, BALL_MAX_PIXEL);
+		ball //= goal_detect(ballDilateMat, MIN_BALL_WIDTH, MIN_BALL_HEIGHT, BALL_MAX_PIXEL);
+		 = object_detect(ballDilateMat, MIN_BALL_WIDTH, MIN_BALL_HEIGHT, BALL_MAX_PIXEL);
 
         if (showImage)
             outGpu.download(resultMat); // DEBUG
@@ -476,10 +620,14 @@ void update_camera() {
 
 		ball_x.store(ball.x);
 		ball_y.store(ball.y);
+		ext_ball_zone.store(ball_close(ball.x, ball.y));
 
 		goal_x.store(goal.x);
 		goal_y.store(goal.y);
 		goal_height.store(goal.height);
+		goal_width.store(goal.width);
+
+		//cout << ball.width << endl;
 
 		if (showImage) {
 			if (ext_i_see_goal_to_kick) {
@@ -509,6 +657,7 @@ void update_camera() {
 			}
 
 			if (ball.x != -1 && ball.width > 0 && ball.height > 0) {
+				//rectangle(resultMat, Point(ball.x-ball.width/2, ball.y-ball.height/2), Point(ball.x+ball.width/2, ball.y+ball.height/2), Scalar(0, 255, 0), 2, 8);
 				rectangle(resultMat, Point(0, ball.y), Point(1032, ball.y), Scalar(255, 0, 0), 2, 8);
 				rectangle(resultMat, Point(ball.x, 0), Point(ball.x, 772), Scalar(255, 0, 0), 2, 8);
 				resize(ballMat,ballMarker,Size(ball.width,ball.height));
@@ -517,14 +666,25 @@ void update_camera() {
 				//						ballMarker.cols, ballMarker.rows)));
 			}
 
+			/*for(int j = 0; j < p_balls.size(); j++){
+				rectangle(resultMat, Point(p_balls[j].x, p_balls[j].y), Point(p_balls[j].x+p_balls[j].width, p_balls[j].y+p_balls[j].height), Scalar(0, 255, 0), 2, 8);
+			}*/
+
 			  //cout << "Goal height: " << goal.height << " goal width: " << goal.width << "\n";
 		}
 
 		if(CALIBRATION && showImage) {
 			outGpu.download(mat);
 			goalDilateMat.download(goalDilated);
+			ballDilateMat.download(ballDilated);
+			greenDilateMat.download(greenDilated);
+
+			auto channels = std::vector<cv::Mat>{Mat(WIDTH, HEIGHT, CV_8UC1, Scalar(0)), goalDilated, ballDilated, greenDilated};
+			cv::merge(channels, debugMerge);
+
 			createImageWindows();
-			debugImage(&goalDilated);
+			//debugImage(&greenDilated);
+			debugImage(&debugMerge);
 			continue;
 		}
 

@@ -1,5 +1,5 @@
 #program name
-PROGRAM=ximeaJetsonGPU 
+PROGRAM=ximeaJetsonGPU
 #build file
 OBJDIR = build
 
@@ -12,7 +12,7 @@ COBJECTS := $(CSOURCES:%.cpp=$(OBJDIR)/%.o)
 #CUDA compiler
 NVCC = /usr/local/cuda-8.0/bin/nvcc
 CUDAPATH = /usr/local/cuda-8.0
-NFLAGS = -ccbin g++ -std=c++11 -m64 -gencode arch=compute_53,code=sm_53 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_62,code=sm_62 -gencode arch=compute_62,code=compute_62
+NFLAGS = -ccbin g++ -std=c++11 -m64 -gencode arch=compute_62,code=sm_62 -gencode arch=compute_62,code=compute_62
 NSOURCES := $(wildcard *.cu)
 NOBJECTS := $(NSOURCES:%.cu=$(OBJDIR)/%.o)
 
@@ -60,6 +60,11 @@ runGui: $(PROGRAM)
 	@rm -f /tmp/*.png
 	@cat ~nvidia/.Xauthority > ~/.Xauthority
 	@LD_LIBRARY_PATH=/root/opencv-3.3.0/build/lib DISPLAY=:0 ./ximeaJetsonGPU
+
+runVitrual: $(PROGRAM)
+	@rm -f /tmp/*.png
+	@cat ~nvidia/.Xauthority > ~/.Xauthority
+	@LD_LIBRARY_PATH=/root/opencv-3.3.0/build/lib DISPLAY=:1 ./ximeaJetsonGPU
 
 watch: $(PROGRAM)
 	@gst-launch-1.0 tcpclientsrc port=4444 host=localhost ! h264parse ! avdec_h264 ! glimagesink

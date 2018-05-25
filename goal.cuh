@@ -13,13 +13,9 @@
 #include "opencv2/cudaimgproc.hpp"
 #include "opencv2/cudaarithm.hpp"
 #include <iostream>
+#include "image_processing.cuh"
 
-struct object {
-	int x;
-	int y;
-	int width;
-	int height;
-};
+#define BALL_TOLERANCE 13
 
 __host__ object goal_detect(cv::cuda::GpuMat &src, int min_width, int min_height, int max_pixel);
 
