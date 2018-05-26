@@ -36,7 +36,7 @@
 #define FIFTH_ZONE_NUMBER 5
 #define BLYAT_ZONE_NUMBER 6
 
-#define FIRST_ZONE_TOLERANCE 150
+#define FIRST_ZONE_TOLERANCE 10
 #define SECOND_ZONE_TOLERANCE 10
 #define THIRD_ZONE_TOLERANCE 10
 #define FOURTH_ZONE_TOLERANCE 10
@@ -51,6 +51,7 @@ extern atomic<int> ball_x;
 extern atomic<int> ball_y;
 extern atomic<int> ext_ball_zone;
 
+extern atomic<bool> ball_close_kick;
 
 extern atomic<bool> goal_visible;
 extern atomic<int> goal_x;

@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
 
 		int local_speed = robot_speed.load();
 
-		if ((FORWARD_ANGLE - bd) < 93 && (FORWARD_ANGLE - bd) > 87) {
+		if ((FORWARD_ANGLE - bd) < (90+10) && (FORWARD_ANGLE - bd) > (90-10)) {
 			if (ball_zone <= FIRST_ZONE_NUMBER) {
 				i_see_ball_infront_me = 1;
 			} else {
@@ -160,6 +160,7 @@ int main(int argc, char* argv[]) {
             local_degree = (compass_degree.load()+270) % 360;
         }
 
+		i_have_ball = ball_close_kick; // false
 
 		if(i_have_ball) {
 			trick = false;

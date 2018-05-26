@@ -63,6 +63,8 @@ atomic<int> ball_x;
 atomic<int> ball_y;
 atomic<int> ext_ball_zone;
 
+atomic<bool> ball_close_kick;
+
 atomic<int> goal_x;
 atomic<int> goal_y;
 atomic<int> goal_height;
@@ -107,6 +109,11 @@ object goal, ball;
 #define BALL_MAX_PIXEL 772
 
 #define KICK_TOLERANCE 30
+
+#define KICK_X_DIFFERENCE 70
+
+#define BALL_Y_MIN_KICK 365
+#define BALL_Y_MAX_KICK 500
 
 struct timespec t0, t1;
 
@@ -504,7 +511,7 @@ void write_to_livestream() {
 string pipeline = "appsrc ! videoconvert ! videoscale ! video/x-raw,width=500 ! clockoverlay shaded-background=true font-desc=\"Sans 38\" ! x264enc tune=\"zerolatency\" threads=1 ! tcpserversink host=0.0.0.0 port=4444";
 VideoWriter writer(pipeline, 0, (double)25, cv::Size(1032, 772), false);
 
-int calib_count = 1;
+int calib_count = 666;
 
 void distance_calibration(int count) {
 	fstream calibration_data;
@@ -635,6 +642,16 @@ void update_camera() {
 			} else {
 				putText(resultMat, "NO KICK", Point2f(10, 25), FONT_HERSHEY_PLAIN, 2, Scalar(0,255,0,255));
 			}
+			rectangle(resultMat, Point((HEIGHT/2)-KICK_X_DIFFERENCE, 365),
+								 Point((HEIGHT/2)+KICK_X_DIFFERENCE, 500),
+								 Scalar(0, 255, 255), 2, 8);
+		}
+
+		if ((ball.x > (HEIGHT/2)-KICK_X_DIFFERENCE && ball.x < (HEIGHT/2)+KICK_X_DIFFERENCE)
+			&& (ball.y > BALL_Y_MIN_KICK && ball.y < BALL_Y_MAX_KICK)) {
+			ball_close_kick = true;
+		} else {
+			ball_close_kick = false;
 		}
 
 		if (showImage) {
