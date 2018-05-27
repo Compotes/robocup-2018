@@ -19,5 +19,7 @@ void init_client();
 void bluetooth_read();
 void bluetooth_write();
 
+extern atomic<bool> ext_goolkeeper;
+
 
 #endif

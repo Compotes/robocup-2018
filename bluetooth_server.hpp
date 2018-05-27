@@ -12,13 +12,12 @@
 
 
 #include "Camera.hpp"
+#include "bluetooth_client.hpp"
 
 using namespace std;
 
 void init_bluetooth_server();
 void bluetooth_read_thread();
 void bluetooth_write_thread();
-
-extern atomic<bool> i_attack;
 
 #endif

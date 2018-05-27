@@ -93,11 +93,13 @@ int main(int argc, char* argv[]) {
 	init_server();
 	init_gpio();
 
-	if (i_am_server) {
+	/*if (i_am_server) {
 		init_bluetooth_server();
 	} else {
 		init_bluetooth_client();
-	}
+	}*/
+
+	ext_goolkeeper = 1;
 	robot_speed.store(DEFAULT_SPEED);
 
 	while(true) {
@@ -116,13 +118,15 @@ int main(int argc, char* argv[]) {
 			ext_compass_reset.store(true);
 		}
 
-		if (get_gpio_status(DRIBBLER_READ_GPIO) == 1 && i_have_ball_counter < I_HAVE_BALL_TOLLERANCE) {
+		cout << !get_gpio_status(COMPASS_RESET_READ_GPIO) << endl;
+
+		/*if (get_gpio_status(DRIBBLER_READ_GPIO) == 1 && i_have_ball_counter < I_HAVE_BALL_TOLLERANCE) {
 			i_have_ball = true;
 			i_have_ball_counter++;
-		} else {
-			i_have_ball_counter = 0;
-			i_have_ball = false;
-		}
+		} else {*/
+			//i_have_ball_counter = 0;
+			//i_have_ball = false;
+		//}
 
         i_see_ball = ball_visible.load();
         i_see_goal = goal_visible.load();
@@ -160,14 +164,6 @@ int main(int argc, char* argv[]) {
 				local_speed = robot_speed.load();
 			} else if (ball_zone <= FIFTH_ZONE_NUMBER) {
 				local_degree += 2*(local_degree-90);// /ball_zone;
-				/*int f;
-				if ((local_degree) < 90) {
-					f = 2*local_degree;
-					local_degree -= f/ball_zone;
-				} else {
-					f = 2*(180-local_degree);
-					local_degree += f/ball_zone;
-				}*/
 			}
 
         } else {
@@ -175,6 +171,19 @@ int main(int argc, char* argv[]) {
         }
 
 		i_have_ball = ball_close_kick; // false
+
+		if (ext_goolkeeper) {
+			local_speed = 20;
+			if (!get_gpio_status(SENSOR_1_READ_GPIO) && !get_gpio_status(SENSOR_2_READ_GPIO)){
+				local_degree = (compass_degree.load()+270) % 360;
+			} else if (!get_gpio_status(SENSOR_1_READ_GPIO)) {
+				local_degree = (compass_degree.load()+0) % 360;;
+			} else if (!get_gpio_status(SENSOR_2_READ_GPIO)) {
+				local_degree = (compass_degree.load()+180) % 360;;
+			} else {
+				local_speed = 0;
+			}
+		}
 
 		if (i_see_goal) {
 			trick = false;
@@ -184,23 +193,10 @@ int main(int argc, char* argv[]) {
             azimuth = (compass_degree.load()) % 360;
 		}
 
-		if (trick) {
-			local_degree = (compass_degree.load()+90) % 360;
-			local_speed = TRICK_SPEED;
-			azimuth = (compass_degree.load()+180) % 360;
-
-			if (abs(azimuth) < TRICK_TOLERANCE) {
-				local_speed = 0;
-			} else {
-				azimuth = 100;
-				local_speed = 10;
-			}
-		}
-
-        ext_degree.store(local_degree);
+		ext_degree.store(local_degree);
 		ext_speed.store(local_speed);
 
-		if (i_have_ball && i_see_goal_to_kick && kicker_available && !trick && i_see_ball_infront_me && !kick_started) /* && goal_height.load() > 70*/ {
+		if (i_see_goal_to_kick && kicker_available && !trick && i_see_ball_infront_me && !kick_started) /* && goal_height.load() > 70*/ {
 			gettimeofday(&kicker_start, 0);
 			gettimeofday(&kick_start, 0);
 

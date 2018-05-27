@@ -34,10 +34,10 @@ void init_client(){
 	}
 }
 
-void bluetooth_read(){
-	while (true){
+void bluetooth_read() {
+	while (true) {
 		read(c_sock, buf, sizeof buf);
-		if(buf[0] == '0'){
+		if(buf[0] == '0') {
 			ext_goolkeeper.store(0);
 		} else {
 			ext_goolkeeper.store(1);
@@ -45,14 +45,14 @@ void bluetooth_read(){
 	}
 }
 
-void bluetooth_write(){
+void bluetooth_write() {
 	while (true){
-		if (ball_visible.load()){
+		if (ball_visible.load()) {
 			new_zone = ext_ball_zone.load();
 		} else {
 			new_zone = 0;
 		}
-		if(new_zone != bluetooth_ball_zone){
+		if(new_zone != bluetooth_ball_zone) {
 			bluetooth_ball_zone = new_zone;
 			write(c_sock, to_string(bluetooth_ball_zone).c_str(), 1);
 		}
