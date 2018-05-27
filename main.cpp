@@ -10,7 +10,10 @@
 #include "Camera.hpp"
 #include "Server.hpp"
 #include "GPIO.hpp"
-#include "bluetooth.hpp"
+
+#include "bluetooth_client.hpp"
+#include "who_am_I.hpp"
+#include "bluetooth_server.hpp"
 
 #define FORWARD_ANGLE 90
 #define BACKWARD_ANGLE 270
@@ -83,13 +86,18 @@ int relative_azimuth(int x) {
 
 int main(int argc, char* argv[]) {
 
+	init_who_am_I();
 	init_camera();
 	init_compass();
 	init_serial();
 	init_server();
 	init_gpio();
-	init_bluetooth();
 
+	if (i_am_server) {
+		init_bluetooth_server();
+	} else {
+		init_bluetooth_client();
+	}
 	robot_speed.store(DEFAULT_SPEED);
 
 	while(true) {
