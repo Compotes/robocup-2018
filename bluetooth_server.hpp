@@ -10,6 +10,9 @@
 #include <thread>
 #include <atomic>
 
+
+#include "Camera.hpp"
+
 using namespace std;
 
 void init_bluetooth_server();

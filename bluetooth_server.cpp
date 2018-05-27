@@ -33,15 +33,26 @@ void bluetooth_read_thread() {
 	while (true) {
 		bytes_read = read(client, buf, sizeof(buf));
 		if( bytes_read > 0 ) {
-			cout << "DOSTAL SOM DACO" << endl;
-			cout << buf << endl;
+			if (ball_visible.load()) {
+				if (atoi(buf[0]) > ext_ball_zone.load() || atoi(buf[0]) == 0){
+					i_attack.store(true);
+				} else {
+					i_attack.store(false);
+				}
+			} else {
+				if (atoi(buf[0]) > 0) {
+					i_attack.store(false);
+				} else {
+					i_attack.store(true);
+				}
+			}
 		}
 	}
 }
 
 void bluetooth_write_thread() {
 	while (true) {
-		if (i_attack) {
+		if (i_attack.load()) {
 			write(client, "0", 1);
 		} else {
 			write(client, "1", 1);
