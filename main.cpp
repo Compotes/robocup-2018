@@ -10,6 +10,7 @@
 #include "Camera.hpp"
 #include "Server.hpp"
 #include "GPIO.hpp"
+#include "bluetooth.hpp"
 
 #define FORWARD_ANGLE 90
 #define BACKWARD_ANGLE 270
@@ -25,7 +26,8 @@
 #define DEFAULT_SPEED 60
 #define DEFAULT_FORWARD_SPEED 30
 #define DEFAULT_BACKWARD_SPEED 30
-#define KICK_DELAY 1 // in seconds
+#define KICK_DELAY 100000 // in micro seconds
+#define KICK_TIME_OUT 1 // in seconds
 #define ROBOT_MAX 40
 #define ATTACK_ANGLE_TOLERANCE 15
 
@@ -41,6 +43,7 @@ bool i_see_ball_close = false;
 bool i_have_ball = false;
 bool i_see_ball = false;
 bool i_see_ball_infront_me = false;
+bool kick_started = false;
 
 int i_have_ball_counter = 0;
 
@@ -50,6 +53,8 @@ int ball_zone = BLYAT_ZONE_NUMBER;
 
 timeval kicker_start;
 timeval kicker_end;
+timeval kick_start;
+timeval kick_end;
 bool kicker_available = true;
 
 int compass_reset_status = 0;
@@ -83,6 +88,7 @@ int main(int argc, char* argv[]) {
 	init_serial();
 	init_server();
 	init_gpio();
+	init_bluetooth();
 
 	robot_speed.store(DEFAULT_SPEED);
 
@@ -162,10 +168,7 @@ int main(int argc, char* argv[]) {
 
 		i_have_ball = ball_close_kick; // false
 
-		if(i_have_ball) {
-			trick = false;
-			azimuth = (compass_degree.load()) % 360;
-		} else if (i_see_goal) {
+		if (i_see_goal) {
 			trick = false;
             azimuth = (gd) * (-1);
 		} else {
@@ -189,18 +192,28 @@ int main(int argc, char* argv[]) {
         ext_degree.store(local_degree);
 		ext_speed.store(local_speed);
 
-		if (i_have_ball && i_see_goal_to_kick && kicker_available && !trick && i_see_ball_infront_me) /* && goal_height.load() > 70*/ {
+		if (i_have_ball && i_see_goal_to_kick && kicker_available && !trick && i_see_ball_infront_me && !kick_started) /* && goal_height.load() > 70*/ {
 			gettimeofday(&kicker_start, 0);
-			ext_kick.store(true);
+			gettimeofday(&kick_start, 0);
+
+			kick_started = true;
 			i_see_goal_to_kick = false;
 			kicker_available = false;
 		} else if (i_have_ball) {
 			//trick = true;
 		}
 
+		if (kick_started){
+			gettimeofday(&kick_end, 0);
+			if (kick_end.tv_usec - kick_start.tv_usec > KICK_DELAY) {
+				ext_kick.store(true);
+				kick_started = false;
+			}
+		}
+
 		if (!kicker_available) {
 			gettimeofday(&kicker_end, 0);
-			if (kicker_end.tv_sec - kicker_start.tv_sec > KICK_DELAY) {
+			if (kicker_end.tv_sec - kicker_start.tv_sec > KICK_TIME_OUT) {
 				kicker_available = true;
 			}
 		}
