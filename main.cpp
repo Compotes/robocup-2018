@@ -222,6 +222,9 @@ int main(int argc, char* argv[]) {
 					local_degree = (compass_degree.load()+0) % 360;
 				}
 			}
+		} else {
+			i_saw_line = false;
+			i_saw_line_again = false;
 		}
 
 		if (i_see_goal) {
