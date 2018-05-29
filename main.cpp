@@ -97,11 +97,11 @@ int main(int argc, char* argv[]) {
 	init_server();
 	init_gpio();
 
-	/*if (i_am_server) {
+	if (i_am_server) {
 		init_bluetooth_server();
 	} else {
 		init_bluetooth_client();
-	}*/
+	}
 
 	ext_goolkeeper = 1;
 	robot_speed.store(DEFAULT_SPEED);

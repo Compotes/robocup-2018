@@ -13,6 +13,7 @@
 
 
 #include "Camera.hpp"
+#include "Serial.hpp"
 
 void init_bluetooth_client();
 void init_client();

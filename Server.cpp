@@ -140,9 +140,9 @@ void web(int fd) {
 
 		if (json_data["go"] == "1") {
 			if(ext_start.load()){
-				ext_start.store(false);
+				//ext_start.store(false);
 			} else {
-				ext_start.store(true);
+				//ext_start.store(true);
 			}
 			json_data["go"] = "0";
 		}
@@ -214,7 +214,11 @@ void web(int fd) {
 		if(ball_degree == -51){
 			level = -500;
 		}
-		sprintf(bufer,"--width:%d; --goal_degree:%d; --goal_color: %s; --azimuth: %d; --level:%d; --ball_degree:%d", width, goal_degree, goal_color.c_str(), azimuth, level, ball_degree);
+		string go_color = "red";
+		if(ext_start.load()){
+			go_color = "green";
+		}
+		sprintf(bufer,"--width:%d; --goal_degree:%d; --goal_color: %s; --azimuth: %d; --level:%d; --ball_degree:%d; --go_color:%s", width, goal_degree, goal_color.c_str(), azimuth, level, ball_degree, go_color.c_str());
         sprintf(buffer,"HTTP/1.1 200 OK\nServer: nweb/%d.0\nContent-Length: %ld\nAccess-Control-Allow-Origin: *\nConnection: close\nContent-Type: html\n\n", VERSION, strlen(bufer)); /* Header + a blank line */
 		write(fd,buffer,strlen(buffer));
 		write(fd,bufer,strlen(bufer));

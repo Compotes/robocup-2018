@@ -14,6 +14,7 @@
 #include "Camera.hpp"
 #include "bluetooth_client.hpp"
 #include "Server.hpp"
+#include "Serial.hpp"
 
 using namespace std;
 

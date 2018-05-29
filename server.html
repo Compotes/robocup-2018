@@ -274,7 +274,7 @@ input:checked + .slider:before {
 	height: 300px;
 	margin: auto;
 	border-radius: 50%;
-	background: radial-gradient(#936900 10%, #3d3d4a 0 20%, #7a7a7a 0 20.5%, #3d3d4a 0 30%, #7a7a7a 0 30.5%, #3d3d4a 0 40%, #7a7a7a 0 40.5%, #3d3d4a 0 50%, #7a7a7a 0 50.5%, #3d3d4a 0  60%,  #7a7a7a 0 60.5% , transparent 0 70%, #7a7a7a 0 70.5%, #3d3d4a 0 80%),
+	background: radial-gradient(var(--go_color) 10%, #3d3d4a 0 20%, #7a7a7a 0 20.5%, #3d3d4a 0 30%, #7a7a7a 0 30.5%, #3d3d4a 0 40%, #7a7a7a 0 40.5%, #3d3d4a 0 50%, #7a7a7a 0 50.5%, #3d3d4a 0  60%,  #7a7a7a 0 60.5% , transparent 0 70%, #7a7a7a 0 70.5%, #3d3d4a 0 80%),
 	conic-gradient(var(--goal_color) calc(var(--width)*1%), transparent 0 100%);
 	transform: rotate(calc(var(--azimuth)*1deg)) rotate(calc(var(--goal_degree)*1deg));
 }
@@ -379,7 +379,7 @@ input:checked + .slider:before {
 			</table>
 		</div>
 	</div>
-	<div class='robot' id='robot' style='--width:15; --goal_degree:20; --goal_color:yellow; --azimuth: 10; --level:0; --ball_degree:90'>
+	<div class='robot' id='robot' style='--width:15; --goal_degree:20; --goal_color:yellow; --azimuth: 10; --level:0; --ball_degree:90; --go_color=red'>
 		<div class='front_hole'>
 		</div>
 		<div class='ball'>

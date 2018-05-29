@@ -28,6 +28,7 @@ void init_client(){
 
 	status = connect(c_sock, (struct sockaddr *)&addr, sizeof(addr));
 	if(status) {
+		this_thread::sleep_for(chrono::milliseconds(100));
 		init_client();
 	} else {
 		cout << "bluetooth connected" << endl;
@@ -47,10 +48,14 @@ void bluetooth_read() {
 
 void bluetooth_write() {
 	while (true){
-		if (ball_visible.load()) {
-			new_zone = ext_ball_zone.load();
+		if(ext_start.load()){
+			if (ball_visible.load()) {
+				new_zone = ext_ball_zone.load();
+			} else {
+				new_zone = 0;
+			}
 		} else {
-			new_zone = 0;
+			new_zone = 9;
 		}
 		if(new_zone != bluetooth_ball_zone) {
 			bluetooth_ball_zone = new_zone;

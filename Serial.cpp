@@ -13,6 +13,7 @@ atomic<int> ext_dribbler_speed;
 atomic<int> ext_azimuth;
 atomic<bool> ext_calibration;
 atomic<bool> ext_start;
+atomic<bool> ext_real_start;
 atomic<bool> ext_dribbler_start;
 atomic<bool> ext_kick;
 atomic<bool> ext_send_calibration_data;
@@ -107,12 +108,12 @@ void read_protocol() {
 		} else if (buf[0] == INIT_COMMAND) {
 			load_lines_values_from_file();
 			ext_send_calibration_data.store(true);
-		} else if (buf[0] == START_STOP_COMMAND){
-			if(ext_start.load()){
-				ext_start.store(false);
-			} else {
-				ext_start.store(true);
-			}
+		} else if (buf[0] == START_COMMAND){
+			cout << "start" << endl;
+			ext_start.store(true);
+		} else if (buf[0] == STOP_COMMAND){
+			cout << "stop" << endl;
+			ext_start.store(false);
 		}
 	}
 }
@@ -200,13 +201,13 @@ void write_protocol() {
 			sdPut(DRIBBLER_STOP_SPEED);
 		}
 
-		if (ext_start && !start) {
+		/*if (ext_start && !start) {
 			start = true;
-			sdPut(START_STOP_COMMAND);
+			sdPut(START_COMMAND);
 		} else if (!ext_start && start) {
 			start = false;
-			sdPut(START_STOP_COMMAND);
-		}
+			sdPut(STOP_COMMAND);
+		}*/
 
 		if (ext_kick) {
 			sdPut(KICK_COMMAND);
@@ -220,9 +221,11 @@ void write_protocol() {
 				cout << lines_values_from_file[i] << endl;
 				sdPut(lines_values_from_file[i]);
 			}
-			if(start){
-				sdPut(START_STOP_COMMAND);
-			}
+			/*if(ext_start.load()){
+				sdPut(START_COMMAND);
+			} else {
+				sdPut(STOP_COMMAND);
+			}*/
 			if(dribbler_start){
 				sdPut(DRIBBLER_START_COMMAND);
 				sdPut(dribbler_speed);
