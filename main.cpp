@@ -52,6 +52,10 @@ int i_have_ball_counter = 0;
 
 bool trick = false;
 
+bool last_site_right = false;
+bool i_saw_line = false;
+bool i_saw_line_again = false;
+
 int ball_zone = BLYAT_ZONE_NUMBER;
 
 timeval kicker_start;
@@ -114,11 +118,9 @@ int main(int argc, char* argv[]) {
 		int bx = ball_x.load();
         bd = ((bx - midx) / px_deg);
 
-		if (!get_gpio_status(COMPASS_RESET_READ_GPIO)) {
+		if (get_gpio_status(COMPASS_RESET_READ_GPIO)) {
 			ext_compass_reset.store(true);
 		}
-
-		cout << !get_gpio_status(COMPASS_RESET_READ_GPIO) << endl;
 
 		/*if (get_gpio_status(DRIBBLER_READ_GPIO) == 1 && i_have_ball_counter < I_HAVE_BALL_TOLLERANCE) {
 			i_have_ball = true;
@@ -171,17 +173,49 @@ int main(int argc, char* argv[]) {
         }
 
 		i_have_ball = ball_close_kick; // false
-
+		
 		if (ext_goolkeeper) {
-			local_speed = 20;
-			if (!get_gpio_status(SENSOR_1_READ_GPIO) && !get_gpio_status(SENSOR_2_READ_GPIO)){
-				local_degree = (compass_degree.load()+270) % 360;
+			local_speed = 40;
+			if (!get_gpio_status(SENSOR_1_READ_GPIO) && !get_gpio_status(SENSOR_2_READ_GPIO)) {
+				if(!i_saw_line) {
+					local_degree = (compass_degree.load()+270) % 360;
+				} else if(last_site_right) {
+					local_degree = (compass_degree.load()+180) % 360;
+				}else{
+					local_degree = (compass_degree.load()+0) % 360;
+				}
+				if (ext_line_detected) {
+					if(!i_saw_line){
+						i_saw_line = true;
+					} else if(!i_saw_line_again){
+						i_saw_line_again = true;
+						if(last_site_right) {
+							last_site_right = false;
+						} else {
+							last_site_right = true;
+						}
+					} else {
+						i_saw_line = false;
+						i_saw_line_again = false;
+					}
+					ext_line_detected = false;
+				}
 			} else if (!get_gpio_status(SENSOR_1_READ_GPIO)) {
-				local_degree = (compass_degree.load()+0) % 360;;
+				last_site_right = true;
+				local_degree = (compass_degree.load()+180) % 360;
 			} else if (!get_gpio_status(SENSOR_2_READ_GPIO)) {
-				local_degree = (compass_degree.load()+180) % 360;;
+				last_site_right = false;
+				local_degree = (compass_degree.load()+0) % 360;
 			} else {
-				local_speed = 0;
+				i_saw_line = false;
+				i_saw_line_again = false;
+				if(!ball_visible || abs(bd) < 10) {
+					local_speed = 0;
+				} else if(bd < 0) {
+					local_degree = (compass_degree.load()+180) % 360;
+				} else {
+					local_degree = (compass_degree.load()+0) % 360;
+				}
 			}
 		}
 

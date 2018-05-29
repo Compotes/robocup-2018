@@ -31,29 +31,37 @@ void bluetooth_read_thread() {
 	while (true) {
 		bytes_read = read(client, buf, sizeof(buf));
 		if( bytes_read > 0 ) {
-			if (ball_visible.load()) {
-				if (atoi(buf) > ext_ball_zone.load() || atoi(buf) == 0){
-					ext_goolkeeper.store(false);
+			if (ext_start.load()){
+				if (ball_visible.load()) {
+					if (atoi(buf) > ext_ball_zone.load() || atoi(buf) == 0){
+						ext_goolkeeper.store(false);
+					} else {
+						ext_goolkeeper.store(true);
+					}
 				} else {
-					ext_goolkeeper.store(true);
+					if (atoi(buf) > 0) {
+						ext_goolkeeper.store(true);
+					} else {
+						ext_goolkeeper.store(false);
+					}
 				}
 			} else {
-				if (atoi(buf) > 0) {
-					ext_goolkeeper.store(true);
-				} else {
-					ext_goolkeeper.store(false);
-				}
+				ext_goolkeeper.store(false);
 			}
 		}
 	}
 }
 
 void bluetooth_write_thread() {
+	bool goolkeeper = false;
 	while (true) {
-		if (ext_goolkeeper.load()) {
-			write(client, "1", 1);
-		} else {
-			write(client, "0", 1);
+		if (goolkeeper != ext_goolkeeper.load()){
+			goolkeeper = ext_goolkeeper.load();
+			if (goolkeeper) {
+				write(client, "0", 1);
+			} else {
+				write(client, "1", 1);
+			}
 		}
 	}
 }

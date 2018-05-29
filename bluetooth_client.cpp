@@ -10,7 +10,7 @@ int bluetooth_ball_zone = 0;
 int new_zone;
 
 void init_bluetooth_client(){
-	ext_goolkeeper.store(1);
+	ext_goolkeeper.store(0);
 	init_client();
 	thread bluetooth_read_thread(bluetooth_read);
     bluetooth_read_thread.detach();
@@ -54,7 +54,11 @@ void bluetooth_write() {
 		}
 		if(new_zone != bluetooth_ball_zone) {
 			bluetooth_ball_zone = new_zone;
-			write(c_sock, to_string(bluetooth_ball_zone).c_str(), 1);
+			status = write(c_sock, to_string(bluetooth_ball_zone).c_str(), 1);
+			if(status < 0){
+				close(c_sock);
+				init_client();
+			}
 		}
 	}
 }

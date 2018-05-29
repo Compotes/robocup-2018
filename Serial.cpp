@@ -17,6 +17,7 @@ atomic<bool> ext_dribbler_start;
 atomic<bool> ext_kick;
 atomic<bool> ext_send_calibration_data;
 atomic<bool> ext_turn_off_dribbler;
+atomic<bool> ext_line_detected;
 
 bool data_changed = 0;
 
@@ -38,6 +39,7 @@ int init_serial() {
 	ext_start.store(0);
 	ext_kick.store(0);
 	ext_send_calibration_data.store(0);
+	ext_line_detected.store(0);
 
 	load_lines_values_from_file();
 	ext_send_calibration_data.store(true);
@@ -83,7 +85,6 @@ int set_interface_attribs (int fd, int speed, int parity) {
 }
 
 void read_protocol() {
-
 	char buf[1];
 	uint16_t value;
 
@@ -101,9 +102,17 @@ void read_protocol() {
 				save_lines_values(value, i);
 			}
 			save_lines_values_to_file();
+		} else if (buf[0] == LINE_DETECTED_COMMAND) {
+			ext_line_detected.store(true);
 		} else if (buf[0] == INIT_COMMAND) {
 			load_lines_values_from_file();
 			ext_send_calibration_data.store(true);
+		} else if (buf[0] == START_STOP_COMMAND){
+			if(ext_start.load()){
+				ext_start.store(false);
+			} else {
+				ext_start.store(true);
+			}
 		}
 	}
 }
