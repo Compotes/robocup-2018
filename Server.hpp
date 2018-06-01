@@ -21,6 +21,7 @@
 #include "Camera.hpp"
 #include "Serial.hpp"
 #include "lines.hpp"
+#include "constants.hpp"
 
 #define VERSION 23
 #define BUFSIZE 8096

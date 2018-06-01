@@ -2,15 +2,13 @@
 
 using namespace std;
 
-const string BT_SERVER_MAC = "00:04:4B:8C:D4:63";
-
 atomic<bool> i_am_server;
 
 void init_who_am_I() {
 	string my_addr;
 	
 	ifstream mac_file;
-	mac_file.open("mac_addr");
+	mac_file.open(PROGRAM_ROOT_DIR + "mac_addr");
 	
 	mac_file >> my_addr;
 	mac_file.close();

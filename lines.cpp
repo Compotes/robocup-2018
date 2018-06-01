@@ -33,7 +33,7 @@ void save_lines_values(uint16_t loaded_value, int index) {
 void save_lines_values_to_file() {
 
 	fstream calibration_values;
-	calibration_values.open("/root/robocup-2018/CALIBRATION_VALUES.janojedebil", ios::out | ios::trunc);
+	calibration_values.open(PROGRAM_ROOT_DIR+"CALIBRATION_VALUES.janojedebil", ios::out | ios::trunc);
 
 	for(int i = 0; i < CALIBRATION_VALUES_NUMBER; i++) {
 		calibration_values << loaded_values[i] << endl;
@@ -45,7 +45,7 @@ void save_lines_values_to_file() {
 
 void load_lines_values_from_file() {
 	fstream calibration_values;
-	calibration_values.open("/root/robocup-2018/CALIBRATION_VALUES.janojedebil", ios::in);
+	calibration_values.open(PROGRAM_ROOT_DIR+"CALIBRATION_VALUES.janojedebil", ios::in);
 
 	for(int i = 0; i < CALIBRATION_VALUES_NUMBER; i++) {
 		calibration_values >> lines_values_from_file[i];

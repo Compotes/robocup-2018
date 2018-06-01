@@ -267,7 +267,7 @@ void destroyImageWindows() {
 void save_values() {
     fstream camera_values;
     string color = attack_blue_goal ? "blue" : "yellow";
-    camera_values.open("/root/robocup-2018/CAMERA_VALUES." + color, ios::out | ios::trunc);
+    camera_values.open(PROGRAM_ROOT_DIR+"CAMERA_VALUES." + color, ios::out | ios::trunc);
 
     camera_values << goalInRangeParam.minH << endl;
     camera_values << goalInRangeParam.maxH << endl;
@@ -283,7 +283,7 @@ void save_values() {
 
 void save_ball_values() {
 	fstream camera_values;
-	camera_values.open("/root/robocup-2018/CAMERA_VALUES." + BALL_FILE, ios::out | ios::trunc);
+	camera_values.open(PROGRAM_ROOT_DIR+"CAMERA_VALUES." + BALL_FILE, ios::out | ios::trunc);
 
 	camera_values << ballInRangeParam.minH << endl;
     camera_values << ballInRangeParam.maxH << endl;
@@ -299,7 +299,7 @@ void save_ball_values() {
 
 void save_green_values() {
 	fstream camera_values;
-	camera_values.open("/root/robocup-2018/CAMERA_VALUES." + GREEN_FILE, ios::out | ios::trunc);
+	camera_values.open(PROGRAM_ROOT_DIR+"CAMERA_VALUES." + GREEN_FILE, ios::out | ios::trunc);
 
 	camera_values << greenInRangeParam.minH << endl;
     camera_values << greenInRangeParam.maxH << endl;
@@ -316,7 +316,7 @@ void save_green_values() {
 void load_ball_values() {
 	string line;
     fstream camera_values;
-	camera_values.open("/root/robocup-2018/CAMERA_VALUES." + BALL_FILE, ios::in);
+	camera_values.open(PROGRAM_ROOT_DIR+"CAMERA_VALUES." + BALL_FILE, ios::in);
 
     getline(camera_values, line); ballInRangeParam.minH = atoi(line.c_str());
     getline(camera_values, line); ballInRangeParam.maxH = atoi(line.c_str());
@@ -333,7 +333,7 @@ void load_ball_values() {
 void load_green_values() {
 	string line;
     fstream camera_values;
-	camera_values.open("/root/robocup-2018/CAMERA_VALUES." + GREEN_FILE, ios::in);
+	camera_values.open(PROGRAM_ROOT_DIR+"CAMERA_VALUES." + GREEN_FILE, ios::in);
 
     getline(camera_values, line); greenInRangeParam.minH = atoi(line.c_str());
     getline(camera_values, line); greenInRangeParam.maxH = atoi(line.c_str());
@@ -353,7 +353,7 @@ void load_values() {
     string line;
     fstream camera_values;
     string color = attack_blue_goal ? "blue" : "yellow";
-    camera_values.open("/root/robocup-2018/CAMERA_VALUES." + color, ios::in);
+    camera_values.open(PROGRAM_ROOT_DIR+"CAMERA_VALUES." + color, ios::in);
 
     getline(camera_values, line); goalInRangeParam.minH = atoi(line.c_str());
     getline(camera_values, line); goalInRangeParam.maxH = atoi(line.c_str());
@@ -485,8 +485,8 @@ void init_camera() {
     showImage = 0; createTrackbar("show image", "gui", &showImage,  1, 0);
     showFpsCount = 0; createTrackbar("show fps count", "gui", &showFpsCount,  100, 0);
 
-	goalMat = imread("/root/robocup-2018/jerry.png", -1);
-	ballMat = imread("/root/robocup-2018/supak.png", -1);
+	goalMat = imread(PROGRAM_ROOT_DIR+"jerry.png", -1);
+	ballMat = imread(PROGRAM_ROOT_DIR+"supak.png", -1);
 
     thread camera_thread(update_camera);
     camera_thread.detach();
@@ -518,7 +518,7 @@ void distance_calibration(int count) {
 	int measuremets[772];
 	int measuredCount[772];
 
-	calibration_data.open("/root/robocup-2018/BALL_CALIB." + to_string(count), ios::out);
+	calibration_data.open(PROGRAM_ROOT_DIR+"BALL_CALIB." + to_string(count), ios::out);
 	cout << "calibration STARTS in" << endl;
 	for (int i = 5; i > 0; i--) {
 		cout << i << endl;

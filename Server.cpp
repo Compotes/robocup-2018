@@ -15,7 +15,7 @@ string url;
 
 void load_html_for_server() {
 	fstream html_file;
-	html_file.open("/root/robocup-2018/server.html", ios::in);
+	html_file.open(PROGRAM_ROOT_DIR+"server.html", ios::in);
 
 	string line;
 	html = "";

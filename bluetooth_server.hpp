@@ -15,6 +15,7 @@
 #include "bluetooth_client.hpp"
 #include "Server.hpp"
 #include "Serial.hpp"
+#include "constants.hpp"
 
 using namespace std;
 

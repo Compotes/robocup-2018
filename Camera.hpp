@@ -13,6 +13,7 @@
 #include "goal.cuh"
 #include "Compass.hpp"
 #include "image_processing.cuh"
+#include "constants.hpp"
 
 #define EXPOSURE_TIME 10000
 #define CAMERA_TIMEOUT 100000

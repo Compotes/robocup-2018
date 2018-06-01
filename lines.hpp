@@ -13,6 +13,8 @@
 #include <string>
 #include "Compass.hpp"
 #include "Serial.hpp"
+#include "constants.hpp"
+
 using namespace std;
 
 extern uint16_t lines_values_from_file[CALIBRATION_VALUES_NUMBER];

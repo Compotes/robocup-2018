@@ -4,7 +4,6 @@ atomic<bool> ext_goolkeeper;
 
 struct sockaddr_rc addr = { 0 };
 int c_sock, status;
-char dest[18] = "00:04:4B:8C:D4:63";
 char buf[1] = {0};
 int bluetooth_ball_zone = 0;
 int new_zone;
@@ -24,7 +23,7 @@ void init_client(){
 
 	addr.rc_family = AF_BLUETOOTH;
 	addr.rc_channel = (uint8_t) 1;
-	str2ba( dest, &addr.rc_bdaddr );
+	str2ba(BT_SERVER_MAC.c_str(), &addr.rc_bdaddr );
 
 	status = connect(c_sock, (struct sockaddr *)&addr, sizeof(addr));
 	if(status) {
