@@ -114,6 +114,14 @@ void read_protocol() {
 		} else if (buf[0] == STOP_COMMAND){
 			cout << "stop" << endl;
 			ext_start.store(false);
+		} else if (buf[0] == LEFT_FALSE){
+			cout << "left: 0" << endl;
+		} else if (buf[0] == LEFT_TRUE){
+			cout << "left: 1" << endl;
+		} else if (buf[0] == RIGHT_FALSE){
+			cout << "right: 0" << endl;
+		} else if (buf[0] == RIGHT_TRUE){
+			cout << "right: 1" << endl;
 		}
 	}
 }
@@ -231,6 +239,8 @@ void write_protocol() {
 				sdPut(dribbler_speed);
 			}
 			ext_send_calibration_data.store(false);
+			this_thread::sleep_for(chrono::milliseconds(1000));
+			sdPut(START_ULTRASONIC_COMMAND);
 		}
 		serialMeasureFps();
 		this_thread::sleep_for(chrono::milliseconds(10));
