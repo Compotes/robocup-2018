@@ -26,7 +26,7 @@
 #define TRICK_TOLERANCE 20
 #define I_HAVE_BALL_TOLLERANCE 6000
 
-#define DEFAULT_SPEED 45
+#define DEFAULT_SPEED 50
 #define DEFAULT_FORWARD_SPEED 30
 #define DEFAULT_BACKWARD_SPEED 30
 #define KICK_DELAY 10 // in micro seconds
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
 	init_serial();
 	init_server();
 	init_gpio();
-
+	this_thread::sleep_for(chrono::milliseconds(1000));
 	if (i_am_server) {
 		init_bluetooth_server();
 	} else {
@@ -177,8 +177,8 @@ int main(int argc, char* argv[]) {
 		i_have_ball = ball_close_kick; // false
 		
 		if (ext_goolkeeper) {
-			if (!get_gpio_status(SENSOR_1_READ_GPIO) && !get_gpio_status(SENSOR_2_READ_GPIO)) {
-				local_speed = 60;
+			/*if (!get_gpio_status(SENSOR_1_READ_GPIO) && !get_gpio_status(SENSOR_2_READ_GPIO)) {
+				local_speed = 45;
 				if(!i_saw_line) {
 					local_degree = (compass_degree.load()+270) % 360;
 				} else if(last_site_right) {
@@ -203,15 +203,15 @@ int main(int argc, char* argv[]) {
 					ext_line_detected = false;
 				}
 			} else if (!get_gpio_status(SENSOR_1_READ_GPIO)) {
-				local_speed = 60;
+				local_speed = 45;
 				last_site_right = true;
 				local_degree = (compass_degree.load()+180) % 360;
 			} else if (!get_gpio_status(SENSOR_2_READ_GPIO)) {
-				local_speed = 60;
+				local_speed = 45;
 				last_site_right = false;
 				local_degree = (compass_degree.load()+0) % 360;
 			} else {
-				local_speed = 80;
+				local_speed = 45;
 				i_saw_line = false;
 				i_saw_line_again = false;
 				if(!ball_visible || abs(bd) < 2) {
@@ -225,6 +225,8 @@ int main(int argc, char* argv[]) {
 		} else {
 			i_saw_line = false;
 			i_saw_line_again = false;
+		}*/
+			local_degree = (compass_degree.load()+270) % 360;
 		}
 
 		if (i_see_goal) {
