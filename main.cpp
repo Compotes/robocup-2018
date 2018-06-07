@@ -32,7 +32,7 @@
 #define KICK_DELAY 10 // in micro seconds
 #define KICK_TIME_OUT 1 // in seconds
 #define ROBOT_MAX 40
-#define ATTACK_ANGLE_TOLERANCE 15
+#define ATTACK_ANGLE_TOLERANCE 17
 
 #define KICKER_DELAY_TO_KICK 1000
 
@@ -164,6 +164,8 @@ int main(int argc, char* argv[]) {
 		if (ball_visible.load()) {
 			if (local_degree < (90 + ATTACK_ANGLE_TOLERANCE) && local_degree > (90 - ATTACK_ANGLE_TOLERANCE)) {
 				local_speed = robot_speed.load();
+			} else if (ball_zone <= FIRST_ZONE_NUMBER) {
+				local_degree += 3*(local_degree-90)/ball_zone;
 			} else if (ball_zone <= SECOND_ZONE_NUMBER) {
 				local_degree += 1.5*(local_degree-90)/ball_zone;
 			} else if (ball_zone <= FIFTH_ZONE_NUMBER) {
@@ -175,10 +177,10 @@ int main(int argc, char* argv[]) {
         }
 
 		i_have_ball = ball_close_kick; // false
-		
+
 		if (ext_goolkeeper) {
 			/*if (!get_gpio_status(SENSOR_1_READ_GPIO) && !get_gpio_status(SENSOR_2_READ_GPIO)) {
-				local_speed = 45;
+				local_speed = 60;
 				if(!i_saw_line) {
 					local_degree = (compass_degree.load()+270) % 360;
 				} else if(last_site_right) {

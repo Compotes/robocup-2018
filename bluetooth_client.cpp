@@ -60,10 +60,10 @@ void bluetooth_write() {
 		if(new_zone != bluetooth_ball_zone) {
 			bluetooth_ball_zone = new_zone;
 			status = write(c_sock, to_string(bluetooth_ball_zone).c_str(), 1);
-			if(status < 0){
+			/*if(status < 0){
 				close(c_sock);
 				init_client();
-			}
+			}*/
 		}
 	}
 }
