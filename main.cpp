@@ -101,7 +101,9 @@ int main(int argc, char* argv[]) {
 	init_serial();
 	init_server();
 	init_gpio();
+
 /*
+	this_thread::sleep_for(chrono::milliseconds(1000));
 	if (i_am_server) {
 		init_bluetooth_server();
 	} else {
