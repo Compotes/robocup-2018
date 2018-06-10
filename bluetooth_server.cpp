@@ -32,24 +32,24 @@ void bluetooth_read_thread() {
 		bytes_read = read(client, buf, sizeof(buf));
 		if( bytes_read > 0 ) {
 			if(atoi(buf) == 9){
-				ext_goolkeeper.store(false);
+				ext_goalkeeper.store(false);
 			} else {
 				if (ext_start.load()){
 					if (ball_visible.load()) {
 						if (atoi(buf) > ext_ball_zone.load() || atoi(buf) == 0){
-							ext_goolkeeper.store(false);
+							ext_goalkeeper.store(false);
 						} else {
-							ext_goolkeeper.store(true);
+							ext_goalkeeper.store(true);
 						}
 					} else {
 						if (atoi(buf) > 0) {
-							ext_goolkeeper.store(true);
+							ext_goalkeeper.store(true);
 						} else {
-							ext_goolkeeper.store(false);
+							ext_goalkeeper.store(false);
 						}
 					}
 				} else {
-					ext_goolkeeper.store(true);
+					ext_goalkeeper.store(true);
 				}
 			}
 		}
@@ -57,11 +57,11 @@ void bluetooth_read_thread() {
 }
 
 void bluetooth_write_thread() {
-	bool goolkeeper = false;
+	bool goalkeeper = false;
 	while (true) {
-		if (goolkeeper != ext_goolkeeper.load()){
-			goolkeeper = ext_goolkeeper.load();
-			if (goolkeeper) {
+		if (goalkeeper != ext_goalkeeper.load()){
+			goalkeeper = ext_goalkeeper.load();
+			if (goalkeeper) {
 				write(client, "0", 1);
 			} else {
 				write(client, "1", 1);
