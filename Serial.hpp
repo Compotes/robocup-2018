@@ -11,6 +11,7 @@
 #include <atomic>
 #include <chrono>
 #include "lines.hpp"
+#include "bluetooth_client.hpp"
 
 #define SERIAL_SPEED B115200
 #define PARITY 0
@@ -30,6 +31,8 @@
 #define LEFT_FALSE 241
 #define RIGHT_TRUE 240
 #define RIGHT_FALSE 239
+#define LEFT_CLOSE 238
+#define RIGHT_CLOSE 237
 
 
 #define DRIBBLER_STOP_SPEED 100
@@ -49,6 +52,8 @@ extern atomic<bool> ext_kick;
 extern atomic<bool> ext_send_calibration_data;
 extern atomic<bool> ext_turn_off_dribbler;
 extern atomic<bool> ext_line_detected;
+extern atomic<int> ext_left_ultrasonic;
+extern atomic<int> ext_right_ultrasonic;
 
 int set_interface_attribs (int fd, int speed, int parity);
 void set_blocking (int fd, int should_block);

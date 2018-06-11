@@ -88,6 +88,11 @@ int relative_azimuth(int x) {
 	return (0.0011552787*x*x+0.3192050394*x)+3;
 }
 
+int goalkeeper_speed(int degree){
+	return abs(degree)*4/5+35;
+}
+
+
 int main(int argc, char* argv[]) {
 
 	init_who_am_I();
@@ -96,17 +101,21 @@ int main(int argc, char* argv[]) {
 	init_serial();
 	init_server();
 	init_gpio();
+
+/*
 	this_thread::sleep_for(chrono::milliseconds(1000));
 	if (i_am_server) {
 		init_bluetooth_server();
 	} else {
 		init_bluetooth_client();
 	}
-
-	ext_goolkeeper = 1;
+*/
+	ext_goalkeeper = 1;
 	robot_speed.store(DEFAULT_SPEED);
+	bool only_align;
 
 	while(true) {
+		only_align = false;
         int midx = CAM_W / 2;
         int px_deg = CAM_W / CAM_FOV;
         int bd = 0;
@@ -161,7 +170,7 @@ int main(int argc, char* argv[]) {
 		int local_degree = (FORWARD_ANGLE - bd);
 
 		//Ball bypassing
-		if (ball_visible.load()) {
+		if (i_see_ball) {
 			if (local_degree < (90 + ATTACK_ANGLE_TOLERANCE) && local_degree > (90 - ATTACK_ANGLE_TOLERANCE)) {
 				local_speed = robot_speed.load();
 			} else if (ball_zone <= FIRST_ZONE_NUMBER) {
@@ -178,17 +187,27 @@ int main(int argc, char* argv[]) {
 
 		i_have_ball = ball_close_kick; // false
 
-		if (ext_goolkeeper) {
-			/*if (!get_gpio_status(SENSOR_1_READ_GPIO) && !get_gpio_status(SENSOR_2_READ_GPIO)) {
-				local_speed = 60;
+		if (i_see_goal) {
+			trick = false;
+            azimuth = (gd) * (-1);
+		} else {
+			trick = false;
+            azimuth = (compass_degree.load()) % 360;
+		}
+
+
+		if (ext_goalkeeper) {
+            azimuth = (compass_degree.load()) % 360;
+			if (ext_right_ultrasonic.load() == 0 && ext_left_ultrasonic.load() == 0) {
+				local_speed = 50;
 				if(!i_saw_line) {
 					local_degree = (compass_degree.load()+270) % 360;
 				} else if(last_site_right) {
 					local_degree = (compass_degree.load()+180) % 360;
-				}else{
+				} else {
 					local_degree = (compass_degree.load()+0) % 360;
 				}
-				if (ext_line_detected) {
+				if (ext_line_detected.load()) {
 					if(!i_saw_line){
 						i_saw_line = true;
 					} else if(!i_saw_line_again){
@@ -202,22 +221,31 @@ int main(int argc, char* argv[]) {
 						i_saw_line = false;
 						i_saw_line_again = false;
 					}
-					ext_line_detected = false;
+					ext_line_detected.store(false);
 				}
-			} else if (!get_gpio_status(SENSOR_1_READ_GPIO)) {
-				local_speed = 45;
-				last_site_right = true;
-				local_degree = (compass_degree.load()+180) % 360;
-			} else if (!get_gpio_status(SENSOR_2_READ_GPIO)) {
-				local_speed = 45;
-				last_site_right = false;
-				local_degree = (compass_degree.load()+0) % 360;
-			} else {
-				local_speed = 45;
+			} else if (ext_right_ultrasonic.load() == 0) {
 				i_saw_line = false;
 				i_saw_line_again = false;
-				if(!ball_visible || abs(bd) < 2) {
-					local_speed = 0;
+				local_speed = goalkeeper_speed(bd);
+				last_site_right = true;
+				local_degree = (compass_degree.load()+180) % 360;
+			} else if (ext_left_ultrasonic.load() == 0) {
+				i_saw_line = false;
+				i_saw_line_again = false;
+				local_speed = goalkeeper_speed(bd);
+				last_site_right = false;
+				local_degree = (compass_degree.load()+0) % 360;
+			} else if (ext_right_ultrasonic.load() == 2 && ext_left_ultrasonic.load() == 2) {
+				local_speed = 70;
+				i_saw_line = false;
+				i_saw_line_again = false;
+				local_degree = (compass_degree.load()+90) % 360;
+			} else {
+				local_speed = goalkeeper_speed(bd);
+				i_saw_line = false;
+				i_saw_line_again = false;
+				if(!i_see_ball || abs(bd) < 2) {
+					only_align = true;
 				} else if(bd < 0) {
 					local_degree = (compass_degree.load()+180) % 360;
 				} else {
@@ -227,20 +255,11 @@ int main(int argc, char* argv[]) {
 		} else {
 			i_saw_line = false;
 			i_saw_line_again = false;
-		}*/
-			local_degree = (compass_degree.load()+270) % 360;
 		}
+		//	local_degree = (compass_degree.load()+270) % 360;
+		//}
 
-		if (i_see_goal) {
-			trick = false;
-            azimuth = (gd) * (-1);
-		} else {
-			trick = false;
-            azimuth = (compass_degree.load()) % 360;
-		}
 
-		ext_degree.store(local_degree);
-		ext_speed.store(local_speed);
 
 		if (i_have_ball && i_see_goal_to_kick && kicker_available && i_see_ball_infront_me && !kick_started) /* && goal_height.load() > 70*/ {
 			gettimeofday(&kicker_start, 0);
@@ -279,12 +298,30 @@ int main(int argc, char* argv[]) {
 			} else {
 				azimuth *= 1.5;
 			}
-			if(ext_goolkeeper){
-				azimuth *= 1.1;
+			if(ext_goalkeeper){
+				azimuth *= 1.5;
 			}
 			azimuth = relative_azimuth(abs(azimuth)) * az;
+			azimuth/= 2.5;
+			azimuth = azimuth*100/local_speed;
+		}
+		if(only_align){
+			azimuth = compass_degree.load();
+			if(azimuth > 180) {
+				azimuth -= 360;
+			}
+			local_degree = 0;
+			local_speed = abs(azimuth)/10;
+			if(azimuth < 0) azimuth = -100;
+			else if(azimuth > 0) azimuth = 100;
+
+		} else {
+			if (azimuth/*local_speed/100*/ > 15) azimuth = 1500/local_speed;
+			if (azimuth/*local_speed/100*/< -15) azimuth = -1500/local_speed;
 		}
 
+		ext_degree.store(local_degree);
+		ext_speed.store(local_speed);
 		ext_azimuth.store(azimuth);
 
 		//ext_azimuth.store(azimuth * 100 / 180);

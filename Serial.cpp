@@ -6,6 +6,7 @@ int fd;
 bool calibrating = false;
 bool start = false;
 bool dribbler_start = false;
+bool local_goalkeeper;
 
 atomic<int> ext_degree;
 atomic<int> ext_speed;
@@ -19,6 +20,9 @@ atomic<bool> ext_kick;
 atomic<bool> ext_send_calibration_data;
 atomic<bool> ext_turn_off_dribbler;
 atomic<bool> ext_line_detected;
+atomic<int> ext_left_ultrasonic;
+atomic<int> ext_right_ultrasonic;
+
 
 bool data_changed = 0;
 
@@ -116,12 +120,20 @@ void read_protocol() {
 			ext_start.store(false);
 		} else if (buf[0] == LEFT_FALSE){
 			cout << "left: 0" << endl;
+			ext_left_ultrasonic.store(0);
 		} else if (buf[0] == LEFT_TRUE){
 			cout << "left: 1" << endl;
+			ext_left_ultrasonic.store(1);
 		} else if (buf[0] == RIGHT_FALSE){
 			cout << "right: 0" << endl;
+			ext_right_ultrasonic.store(0);
 		} else if (buf[0] == RIGHT_TRUE){
 			cout << "right: 1" << endl;
+			ext_right_ultrasonic.store(1);
+		} else if (buf[0] == LEFT_CLOSE) {
+			ext_left_ultrasonic.store(2);
+		} else if (buf[0] == RIGHT_CLOSE) {
+			ext_right_ultrasonic.store(2);
 		}
 	}
 }
@@ -143,6 +155,7 @@ void serialMeasureFps() {
 }
 
 void write_protocol() {
+	local_goalkeeper = ext_goalkeeper;
 
 	while (true) {
 		int16_t degree = ext_degree.load();
@@ -239,7 +252,13 @@ void write_protocol() {
 				sdPut(dribbler_speed);
 			}
 			ext_send_calibration_data.store(false);
-			this_thread::sleep_for(chrono::milliseconds(1000));
+			if(local_goalkeeper) sdPut(START_ULTRASONIC_COMMAND);
+		}
+		if(local_goalkeeper && !ext_goalkeeper){
+			local_goalkeeper = false;
+			sdPut(STOP_ULTRASONIC_COMMAND);
+		} else if(!local_goalkeeper && ext_goalkeeper){
+			local_goalkeeper = true;
 			sdPut(START_ULTRASONIC_COMMAND);
 		}
 		serialMeasureFps();

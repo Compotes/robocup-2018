@@ -1,6 +1,6 @@
 #include "bluetooth_client.hpp"
 
-atomic<bool> ext_goolkeeper;
+atomic<bool> ext_goalkeeper;
 
 struct sockaddr_rc addr = { 0 };
 int c_sock, status;
@@ -10,7 +10,7 @@ int bluetooth_ball_zone = 0;
 int new_zone;
 
 void init_bluetooth_client(){
-	ext_goolkeeper.store(0);
+	ext_goalkeeper.store(0);
 	init_client();
 	thread bluetooth_read_thread(bluetooth_read);
     bluetooth_read_thread.detach();
@@ -39,9 +39,9 @@ void bluetooth_read() {
 	while (true) {
 		read(c_sock, buf, sizeof buf);
 		if(buf[0] == '0') {
-			ext_goolkeeper.store(0);
+			ext_goalkeeper.store(0);
 		} else {
-			ext_goolkeeper.store(1);
+			ext_goalkeeper.store(1);
 		}
 	}
 }
