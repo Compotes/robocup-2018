@@ -119,16 +119,16 @@ void read_protocol() {
 			cout << "stop" << endl;
 			ext_start.store(false);
 		} else if (buf[0] == LEFT_FALSE){
-			cout << "left: 0" << endl;
+			//cout << "left: 0" << endl;
 			ext_left_ultrasonic.store(0);
 		} else if (buf[0] == LEFT_TRUE){
-			cout << "left: 1" << endl;
+			//cout << "left: 1" << endl;
 			ext_left_ultrasonic.store(1);
 		} else if (buf[0] == RIGHT_FALSE){
-			cout << "right: 0" << endl;
+			//cout << "right: 0" << endl;
 			ext_right_ultrasonic.store(0);
 		} else if (buf[0] == RIGHT_TRUE){
-			cout << "right: 1" << endl;
+			//cout << "right: 1" << endl;
 			ext_right_ultrasonic.store(1);
 		} else if (buf[0] == LEFT_CLOSE) {
 			ext_left_ultrasonic.store(2);
