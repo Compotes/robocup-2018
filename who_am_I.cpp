@@ -10,7 +10,7 @@ void init_who_am_I() {
 	string my_addr;
 	
 	ifstream mac_file;
-	mac_file.open("mac_addr");
+	mac_file.open("/root/robocup-2018/mac_addr");
 	
 	mac_file >> my_addr;
 	mac_file.close();
@@ -25,5 +25,6 @@ void init_who_am_I() {
 		i_am_server = false;
 		cout << "I AM CLIENT" << endl;
 	}
+	//i_am_server = true;
 }
 
